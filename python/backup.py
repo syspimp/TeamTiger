@@ -94,7 +94,7 @@ class do_backup:
 		# ref: https://pypi.python.org/pypi/spur
 		import spur
 		if options.SSHKEY:
-			shell = spur.SshShell( hostname=self.hostname, username=self.username, password=self.password, private_key_file=options.SSHKEY)
+			shell = spur.SshShell( hostname=self.hostname, username=self.username, password=self.password, private_key_file=options.SSHKEY, missing_host_key=spur.ssh.MissingHostKey.accept)
 		else:
 			shell = spur.SshShell( hostname=self.hostname, username=self.username, password=self.password)
 		result = shell.run(cmd)
