@@ -49,12 +49,8 @@ if ( $V1 != "" )
 }
 
 
-$ch = curl_init("http://10.1.0.67:4242/");
-$fp = fopen("q?start=".$TS1."&end=".$TS2."&m=sum:".$V2.$V1."&ascii", "w");
-
-curl_setopt($ch, CURLOPT_FILE, $fp);
+$ch = curl_init("http://10.1.0.67:4242/q?start=".$TS1."&end=".$TS2."&m=sum:".$V2.$V1."&ascii");
 curl_setopt($ch, CURLOPT_HEADER, 0);
-
-curl_exec($ch);
+$result = curl_exec($ch);
 curl_close($ch);
-fclose($fp);
+echo $result;
