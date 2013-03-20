@@ -15,7 +15,7 @@ parser.add_option("-x", "--connect", type="string", dest="HOST", help="Host devi
 parser.add_option("-u", "--user", type="string", dest="USER", help="User to use to login", default=False)
 parser.add_option("-p", "--pass", type="string", dest="PASS", help="Password to use.", default=False)
 parser.add_option("-t", "--type", type="string", dest="TYPE", help="Device type that Host is, options are ciscoswitch,ciscoasa,bigip,arista,hp. default ciscoswitch", default="ciscoswitch")
-parser.add_option("-d", "--destination",  type="string", dest="DESTINATION", help="Directory to save the backups, underneath /var/lib/tftpboot, default is backups/", default="False")
+parser.add_option("-d", "--destination",  type="string", dest="DESTINATION", help="Directory to save the backups, underneath /var/lib/tftpboot, default is backups/", default=False)
 parser.add_option("-c", "--cron", action="store_true", dest="CRON", help="Run as a cron", default=False)
 parser.add_option("-k", "--key", type="string", dest="SSHKEY", help="The path to the SSH Key to use.", default=False)
 
@@ -28,7 +28,7 @@ class do_backup:
 		self.device_type=device_type
 		self.tftpserver=tftpserver
 
-		if options.DESTINATION:
+		if options.DESTINATION != False:
 			self.destination = options.DESTINATION + "/" + self.hostname + ".cfg"
 		else:
 			self.destination = "/backups/" + self.hostname + ".cfg"
@@ -100,34 +100,51 @@ class do_backup:
 		result = shell.run(cmd)
 		return result.output # prints hello
 
-	def _telnet_access(self,cmd):
+	def _telnet_access(self,cmds):
 		import telnetlib
 		telnet_timeout = 5
 
 		try:
-		 device = telnetlib.Telnet(self.hostname)
-		 print device.read_until("Username:", telnet_timeout)
-		 device.write(self.username + "\r")
-		 print device.read_until("Password:", telnet_timeout)
-		 device.write(self.password + "\r")
-		 print device.read_until("#", telnet_timeout)
-		 device.write("\r")
-		 terminal = device.read_until("#")
-		 device.write("term length 0\r\n")
-		 device.read_until(terminal)
-		 device.write
-		 device.write(cmd +"\r\n")     
-		 print device.read_until(terminal)
-		 device.write("exit\r\n")
-		 print "Completed Sucessfully"
-		except:
-		 print "Error Connecting.  Is " + self.HOST + " reachable?"
-		 
+			device = telnetlib.Telnet(self.hostname)
+			print device.read_until("Username:", telnet_timeout)
+			device.write(self.username + "\r")
+			print device.read_until("Password:", telnet_timeout)
+			device.write(self.password + "\r")
+			print device.read_until("#", telnet_timeout)
+			device.write(self.password + "terminal length 0\r")
+			terminal = device.read_until("#")
+			for cmd in cmds:
+		 		device.write(cmd["write"] +"\r")     
+				try:
+					if cmd["read"]:
+						print device.read_until(cmd["read"],telnet_timeout)
+				except:
+					print device.read_until(terminal,telnet_timeout)
+					
+			device.write("exit\r")
+			print "Completed Sucessfully"
+		except Exception as e:
+			for i in e:
+				print "Exception is: %s" % i
 	def ciscoswitch(self):
 		# perform cisco backup
 		print "Performing ciscoswitch telnet backup"
 		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["copy", "running-config", backupdest]
+		
+		cmd=	[{	"write":	"copy running-config "+ backupdest,
+				},
+				{	"write":	"",
+				},
+				{	"write":	"",
+				},
+#				{	"write":	"sho ver",
+#					"read":		"--More--"
+#				{	"write":	"sho ver",
+#					"read":		"--More--"
+#				},
+#				{	"write":	" ",
+#				}
+				]
 		self._telnet_access(cmd)
 		return
 
