@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="style.css" />
+    <title>RedLining Bandwidth Report</title>
+    <script>
+    function clearResults()
+    {
+      document.getElementById("showMe").innerHTML="";
+      return;
+    }
+    function genResults()
+    {
+      var V1 ="";
+      var TS2 = new Date().getTime();
+      var TS1 = TS2-3600*10;
+      
+      /* If "site" is all, then do nothing.. Otherwise V1="site=XXX"
+      */
+      if document.getElementById("site").value != "ALL"
+      {
+        V1="site="+ document.getElementById("site").value;
+      }
+      /* If "traffic type" is both, then do nothing.. Otherwise V1 += ",type=YYY" (or if V1="", ignore the ","..) 
+      */
+      if document.getElementById("traffic").value != "BOTH"
+      {
+        if document.getElementById("site").value != "ALL"
+        { 
+          V1 = V1 + ",type=" + document.getElementById("site").value;
+        }
+      }
+      /* If direction is "inbound", V2="redlining.bytes_received", else V2="redlining.bytes_sent"
+      */
+      if document.getElementById("direction").value == "IN"
+      {
+        V2 = "redlining.bytes_received";
+      }
+      else
+      {
+        V2 ="redlining.bytes_sent";
+      }
+
+      if V1 != ""
+      {
+        V1 = "{"+VA+"}";
+      }
+
+      if (window.XMLHttpRequest)
+      {// code for IE7+, Firefox, Chrome, Opera, Safari
+        xmlhttp=new XMLHttpRequest();
+      }
+      else
+      {// code for IE6, IE5
+        xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+      }
+      xmlhttp.onreadystatechange=function()
+      {
+        if (xmlhttp.readyState==4 && xmlhttp.status==200)
+        {
+          document.getElementById("showMe").innerHTML=xmlhttp.responseText;
+        }
+      }
+      xmlhttp.open("GET","http://10.1.0.67:4242/q?start="+TS1+"&end="+TS2+"&m=sum:"+V2+V1+"&ascii",true);
+      xmlhttp.send();
+    }
+    </script>
+
+</head>
+
+<body>
+
+    Site:
+<select id="site">
+  <option value="ALL">All sites</option>
+  <option value="SQL">SQL (Redwood City, CA)</option>
+  <option value="DFW">DFW (Dallas, TX)</option>
+  <option value="ORD">ORD (Lisle, IL)</option>
+  <option value="EWR">EWR (Secaucus, NJ)</option>
+</select>
+
+    Traffic type:
+
+<select id="traffic">
+  <option value="MIS">Internet</option>
+  <option value="REP">Replication</option>
+  <option value="BOTH">Both</option>
+</select>
+
+    Traffic direction:
+<select id="direction">
+  <option value="IN">Inbound</option>
+  <option value="OUT">Outbound</option>
+</select>
+
+<button type="button" name="display" onClick="genResults()">Display</button>
+<button type="button" name="display" onClick="clearResults()">Clear</button>
+<p>
+<span id="showMe"></span>
+<p>
+</body>
+</html>
+
