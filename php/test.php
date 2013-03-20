@@ -10,12 +10,12 @@ foreach($getvars as $var)
 }
 
 // sanity
-if(!isset('site') || !isset('traffic') || !isset('direction')) return;
+if(!isset($site) || !isset($traffic) || !isset($direction)) return;
 
 
 $V1 ="";
-$TS2 = new Date().getTime();
-$TS1 = $TS2-3600*10;
+$TS2 = time();
+$TS1 = $TS2 - 3600 * 10;
 
 /* If "site" is all, then do nothing.. Otherwise V1="site=XXX"
 */
@@ -48,5 +48,13 @@ if ( $V1 != "" )
   $V1 = "{".$V1."}";
 }
 
-echo php_curl("http://10.1.0.67:4242/q?start=".$TS1."&end=".$TS2."&m=sum:".$V2.$V1."&ascii");
 
+$ch = curl_init("http://10.1.0.67:4242/");
+$fp = fopen("q?start=".$TS1."&end=".$TS2."&m=sum:".$V2.$V1."&ascii", "w");
+
+curl_setopt($ch, CURLOPT_FILE, $fp);
+curl_setopt($ch, CURLOPT_HEADER, 0);
+
+curl_exec($ch);
+curl_close($ch);
+fclose($fp);
