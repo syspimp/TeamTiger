@@ -27,30 +27,33 @@ class do_backup:
 		self.password=password
 		self.device_type=device_type
 		self.tftpserver=tftpserver
+		self.terminalprompt="#"
+		self.logout="exit"
 
 		if options.DESTINATION != False:
 			self.destination = options.DESTINATION + "/" + self.hostname + ".cfg"
 		else:
 			self.destination = "/backups/" + self.hostname + ".cfg"
 		# device types to backup
-		self.device_types = ['ciscoswitch','arista','ciscoasa','ciscorouter']
+		self.device_types = ['ciscoswitch','arista','ciscoasa','ciscorouter','quanta']
 
 		# mapping of devices to access type, 
 		# uses device_type as a key
-		self.access_types = {
-						'ciscoswitch':	'telnet',
-						'ciscorouter':	'ssh',
-						'arista':		'telnet',
-						'bigip':		'soap',
-						'hpswitch':		'telnet'
-						}
+		self.access_types = 	{
+					'ciscoswitch':	'telnet',
+					'ciscorouter':	'ssh',
+					'arista':	'ssh',
+					'bigip':	'soap',
+					'hpswitch':	'telnet',
+					'quanta':	'telnet',
+					}
 
 		# this uses the device_type as a key
 		self.static_devices = {'ciscoswitch':	{
-										'hostname':		'attlabsw1',
-										'username':		'tset',
-										'password':		'test'
-										}}
+							'hostname':	'attlabsw1',
+							'username':	'tset',
+							'password':	'test'
+					}}
 		# sanity check
 		self.check_device_type()
 		self.perform_backup()
@@ -104,22 +107,22 @@ class do_backup:
 		telnet_timeout = 5
 		try:
 			device = telnetlib.Telnet(self.hostname)
-			print device.read_until("Username:", telnet_timeout)
+			print device.read_until("User", telnet_timeout)
 			device.write(self.username + "\r")
-			print device.read_until("Password:", telnet_timeout)
+			print device.read_until("Pass", telnet_timeout)
 			device.write(self.password + "\r")
-			print device.read_until("#", telnet_timeout)
-			device.write(self.password + "terminal length 0\r")
-			terminal = device.read_until("#")
+			print device.read_until(self.terminalprompt, telnet_timeout)
+			if self.device_type != 'quanta':
+				device.write(self.password + "terminal length 0\r")
 			for cmd in cmds:
 		 		device.write(cmd["write"] +"\r")     
 				try:
 					if cmd["read"]:
 						print device.read_until(cmd["read"],telnet_timeout)
 				except:
-					print device.read_until(terminal,telnet_timeout)
+					print device.read_until(self.terminalprompt,telnet_timeout)
 					
-			device.write("exit\r")
+			device.write(self.logout+"\r")
 			print "Completed Sucessfully"
 		except Exception as e:
 			for i in e:
@@ -162,10 +165,21 @@ class do_backup:
 
 	def arista(self):
 		# ...
-		return
+		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
+		cmd = ["show", "version", backupdest]
+		return cmd
 	def bigip(self):
 		# ...
 		return
+	def quanta(self):
+		self.terminalprompt = "(Quanta) >"
+		self.logout = "quit"
+		# ...
+		cmd=	[	{	"write":	"show serial",
+#					"read":		"--More--"
+				}
+				]
+		return cmd
 
 if __name__=='__main__':
 	try:
