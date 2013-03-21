@@ -54,6 +54,7 @@ class do_backup:
 		# sanity check
 		self.check_device_type()
 		self.perform_backup()
+		self.commit_changes()
 
 	def check_device_type(self):
 		# device types are functions which perform the work
@@ -74,13 +75,11 @@ class do_backup:
 
 	def perform_backup(self):
 		self.prepare_tftproot()
-		# example: if device type = ciscoswitch
-		# this should call ciscoswitch() function
-		# and its why we check the device types above
-		#self.device_type()
-		#or we run it through exec
-		exec("cmd = self.%s()" % self.device_type)
-		self.commit_changes()
+		print "Performing %s %s backup" % (self.device_type,self.access_types[self.device_type])
+		# generate command to run
+		exec("cmd=self.%s()" % self.device_type)
+		# execute based on access_type to device_type mapping
+		exec("self._%s_access(cmd)" % self.access_types[self.device_type])
 
 	def commit_changes(self):
 		# svn commit -m "Another commit from backup cron"
@@ -103,7 +102,6 @@ class do_backup:
 	def _telnet_access(self,cmds):
 		import telnetlib
 		telnet_timeout = 5
-
 		try:
 			device = telnetlib.Telnet(self.hostname)
 			print device.read_until("Username:", telnet_timeout)
@@ -128,9 +126,7 @@ class do_backup:
 				print "Exception is: %s" % i
 	def ciscoswitch(self):
 		# perform cisco backup
-		print "Performing ciscoswitch telnet backup"
 		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		
 		cmd=	[{	"write":	"copy running-config "+ backupdest,
 				},
 				{	"write":	"",
@@ -145,28 +141,25 @@ class do_backup:
 #				{	"write":	" ",
 #				}
 				]
-		self._telnet_access(cmd)
-		return
+		return cmd
 
 	def ciscorouter(self):
 		# perform cisco backup
-		print "Performing ciscorouter ssh backup"
 		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
 		cmd = ["copy", "running-config", backupdest]
-		self._ssh_access(cmd)
-		return
-	def hpswitch(self):
-		print "Performing hpswitch telnet backup"
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["copy", "running-config", backupdest]
-		self._telnet_access(cmd)
-		return
+		return cmd
 
-		
+	def hpswitch(self):
+		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
+		cmd = ["copy", "running-config", backupdest]
+		return cmd
+
 	def ciscoasa(self):
 		# perform asa backup
-		self.ciscoasa()
-		return
+		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
+		cmd = ["copy", "running-config", backupdest]
+		return cmd
+
 	def arista(self):
 		# ...
 		return
