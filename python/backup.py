@@ -31,9 +31,8 @@ class do_backup:
 		self.logout="exit"
 
 		if options.DESTINATION != False:
-			self.destination = options.DESTINATION + "/" + self.hostname + ".cfg"
-		else:
-			self.destination = "/backups/" + self.hostname + ".cfg"
+			self.destination = options.DESTINATION
+		self.backupdest = "tftp://"+ self.tftpserver + "/" + self.destination + "/" + self.hostname + ".cfg"
 		# device types to backup
 		self.device_types = ['ciscoswitch','arista','ciscoasa','ciscorouter','quanta']
 
@@ -129,8 +128,7 @@ class do_backup:
 				print "Exception is: %s" % i
 	def ciscoswitch(self):
 		# perform cisco backup
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd=	[{	"write":	"copy running-config "+ backupdest,
+		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
 				},
 				{	"write":	"",
 				},
@@ -148,25 +146,21 @@ class do_backup:
 
 	def ciscorouter(self):
 		# perform cisco backup
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["copy", "running-config", backupdest]
+		cmd = ["copy", "running-config", self.backupdest]
 		return cmd
 
 	def hpswitch(self):
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["copy", "running-config", backupdest]
+		cmd = ["copy", "running-config", self.backupdest]
 		return cmd
 
 	def ciscoasa(self):
 		# perform asa backup
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["copy", "running-config", backupdest]
+		cmd = ["copy", "running-config", self.backupdest]
 		return cmd
 
 	def arista(self):
 		# ...
-		backupdest = "tftp://"+ self.tftpserver + "/" + self.destination
-		cmd = ["show", "version", backupdest]
+		cmd = ["show", "version", self.backupdest]
 		return cmd
 	def bigip(self):
 		# ...
