@@ -29,9 +29,12 @@ class do_backup:
 		self.tftpserver=tftpserver
 		self.terminalprompt="#"
 		self.logout="exit"
+		self.connections=[]
 
 		if options.DESTINATION != False:
 			self.destination = options.DESTINATION
+		else:
+			self.destination = destination
 		self.backupdest = "tftp://"+ self.tftpserver + "/" + self.destination + "/" + self.hostname + ".cfg"
 		# device types to backup
 		self.device_types = ['ciscoswitch','arista','ciscoasa','ciscorouter','quanta']
@@ -91,15 +94,41 @@ class do_backup:
 		# soap request
 		return
 
-	def _ssh_access(self,cmd):
-		# ref: https://pypi.python.org/pypi/spur
-		import spur
-		if options.SSHKEY:
-			shell = spur.SshShell( hostname=self.hostname, username=self.username, password=self.password, private_key_file=options.SSHKEY, missing_host_key=spur.ssh.MissingHostKey.accept)
-		else:
-			shell = spur.SshShell( hostname=self.hostname, username=self.username, password=self.password)
-		result = shell.run(cmd)
-		return result.output # prints hello
+	def _ssh_access(self,cmds):
+		import paramiko
+		client = paramiko.SSHClient()
+		client.set_missing_host_key_policy(
+			paramiko.AutoAddPolicy())
+		try:
+			if options.SSHKEY:
+				client.connect(self.hostname, 
+					username=self.username, 
+					password=self.password,
+					key_filename=options.SSHKEY)
+			else:
+				client.connect(self.hostname, 
+					username=self.username, 
+					password=self.password)				
+		except:
+			client.connect(self.hostname, 
+				username=self.username, 
+				password=self.password)
+		print "Connected!"
+		for cmd in cmds:
+			stdin, stdout, stderr = client.exec_command(cmd["write"])
+			try:
+				if cmd["read"]:
+					data = stdout.read.splitlines()
+					for line in data:
+						if cmd["read"] in line:
+							print "matched %s, now what?" % line
+			except:
+				stdin.flush()
+				data = stdout.read.splitlines()
+				for line in data:
+				    print line	
+			stdin.close()
+ 		
 
 	def _telnet_access(self,cmds):
 		import telnetlib
@@ -146,7 +175,14 @@ class do_backup:
 
 	def ciscorouter(self):
 		# perform cisco backup
-		cmd = ["copy", "running-config", self.backupdest]
+		#cmd = ["copy", "running-config", self.backupdest]
+		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
+				},
+				{	"write":	"",
+				},
+				{	"write":	"",
+				},
+				]
 		return cmd
 
 	def hpswitch(self):
@@ -160,7 +196,16 @@ class do_backup:
 
 	def arista(self):
 		# ...
-		cmd = ["show", "version", self.backupdest]
+		#cmd = ["show", "version", self.backupdest]
+		cmd=	[{	"write":	"show version",
+				},
+#				{	"write":	"copy running-config "+ self.backupdest,
+#				},
+#				{	"write":	"",
+#				},
+#				{	"write":	"",
+#				},
+				]
 		return cmd
 	def bigip(self):
 		# ...
@@ -174,7 +219,9 @@ class do_backup:
 				}
 				]
 		return cmd
-
+	def banIP(self,attacker):
+		return
+		
 if __name__=='__main__':
 	try:
 		"""
