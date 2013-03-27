@@ -19,8 +19,8 @@ parser.add_option("-d", "--destination",  type="string", dest="DESTINATION", hel
 parser.add_option("-c", "--cron", action="store_true", dest="CRON", help="Run as a cron", default=False)
 parser.add_option("-k", "--key", type="string", dest="SSHKEY", help="The path to the SSH Key to use.", default=False)
 
-class do_backup:
-	def __init__(self,device_type,hostname,username,password,destination="/backups",tftproot="/var/lib/tftpboot",tftpserver = "10.55.20.3"):
+class sdn:
+	def __init__(self,device_type="",hostname="",username="",password="",destination="/backups",tftproot="/var/lib/tftpboot",tftpserver = "10.55.20.3"):
 		# these creds should be somewhere safe, maybe imported separately from script
 		self.hostname=hostname
 		self.username=username
@@ -51,16 +51,26 @@ class do_backup:
 					}
 
 		# this uses the device_type as a key
-		self.static_devices = {'ciscoswitch':	{
-							'hostname':	'attlabsw1',
-							'username':	'tset',
-							'password':	'test'
-					}}
-		# sanity check
-		self.check_device_type()
-		self.perform_backup()
-		self.commit_changes()
-
+		self.static_devices = [{	
+						'quanta':	
+							[
+							{'hostname':	'192.168.112.1'},
+							{'username':	'admin'},
+							{'password':	'silverlining'},
+							],
+					{	'arista':	
+							[
+							{'hostname':	'192.168.112.4'},
+							{'username':	'dtaylortest'},
+							{'password':	'dtaylortest'},
+							],
+					{	'arista':
+							[
+							{'hostname':	'192.168.112.5'},
+							{'username':	'dtaylortest'},
+							{'password':	'dtaylortest'},
+							]
+					}]
 	def check_device_type(self):
 		# device types are functions which perform the work
 		# so we make sure the device_type is known
@@ -77,12 +87,35 @@ class do_backup:
 		#is the file there? chmod'ed 777 ?
 		print "TFTP preparing!"
 		return
+	def perform_backup_cron(self):
+			print "Cron job started ... "
+			chef_devices = []
+			i = 0
+			for device_type in self.device_types:
+				#chefarray = chef.exec("who is a " + device_type + "gimme assoc array(hostname,username,password) pls")
+				chefarray = []
+				for chefdev in chefarray:
+					chef_devices[device_type][i] = chefdev
+					i=i+1
+			# merge the results with static entries
+			#alldevices = self.static_devices + chef_devices
+			print self.static_devices
+			# perform the backups
+			for device_type in self.device_types:
+				for key in alldevices:
+					self.username=alldevices[device_type][key]["username"]
+					self.password=alldevices[device_type][key]["password"]
+					self.hostname=alldevices[device_type][key]["hostname"]
+					self.device_type=device_type
+					perform_backup()
 
 	def perform_backup(self):
+		# sanity check
+		self.check_device_type()
 		self.prepare_tftproot()
 		print "Performing %s %s backup" % (self.device_type,self.access_types[self.device_type])
 		# generate command to run
-		exec("cmd=self.%s()" % self.device_type)
+		exec("cmd=self.%s_backup()" % self.device_type)
 		# execute based on access_type to device_type mapping
 		exec("self._%s_access(cmd)" % self.access_types[self.device_type])
 
@@ -104,30 +137,39 @@ class do_backup:
 				client.connect(self.hostname, 
 					username=self.username, 
 					password=self.password,
+					timeout=5,
 					key_filename=options.SSHKEY)
 			else:
 				client.connect(self.hostname, 
 					username=self.username, 
-					password=self.password)				
+					password=self.password,
+					timeout=5)				
 		except:
 			client.connect(self.hostname, 
 				username=self.username, 
-				password=self.password)
+				password=self.password,
+				timeout=5)
 		print "Connected!"
 		for cmd in cmds:
 			stdin, stdout, stderr = client.exec_command(cmd["write"])
 			try:
 				if cmd["read"]:
-					data = stdout.read.splitlines()
+					data = stdout.read().splitlines()
 					for line in data:
 						if cmd["read"] in line:
-							print "matched %s, now what?" % line
+							print "matched %s,breaking" % line
+							break
 			except:
-				stdin.flush()
-				data = stdout.read.splitlines()
-				for line in data:
-				    print line	
+				pass
+			stdin.flush()
+			data = stdout.read().splitlines()
+			for line in data:
+			    print line	
+		try:
 			stdin.close()
+			client.close()
+		except:
+			pass
  		
 
 	def _telnet_access(self,cmds):
@@ -155,7 +197,7 @@ class do_backup:
 		except Exception as e:
 			for i in e:
 				print "Exception is: %s" % i
-	def ciscoswitch(self):
+	def ciscoswitch_backup(self):
 		# perform cisco backup
 		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
 				},
@@ -173,7 +215,7 @@ class do_backup:
 				]
 		return cmd
 
-	def ciscorouter(self):
+	def ciscorouter_backup(self):
 		# perform cisco backup
 		#cmd = ["copy", "running-config", self.backupdest]
 		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
@@ -185,20 +227,23 @@ class do_backup:
 				]
 		return cmd
 
-	def hpswitch(self):
-		cmd = ["copy", "running-config", self.backupdest]
-		return cmd
+	def hpswitch_backup(self):
+		return ciscorouter_backup()
 
-	def ciscoasa(self):
+	def ciscoasa_backup(self):
 		# perform asa backup
-		cmd = ["copy", "running-config", self.backupdest]
-		return cmd
+		return ciscorouter_backup()
 
-	def arista(self):
+	def arista_backup(self):
 		# ...
 		#cmd = ["show", "version", self.backupdest]
-		cmd=	[{	"write":	"show version",
+		cmd=	[
+				{	"write":	"show version",
 				},
+#				{	"write":	"enable",
+#				},
+#				{	"write":	"",
+#				},
 #				{	"write":	"copy running-config "+ self.backupdest,
 #				},
 #				{	"write":	"",
@@ -207,10 +252,12 @@ class do_backup:
 #				},
 				]
 		return cmd
-	def bigip(self):
+	def bigip_backup(self):
 		# ...
 		return
-	def quanta(self):
+	def quanta_banIp(self,attacker):
+		return
+	def quanta_backup(self):
 		self.terminalprompt = "(Quanta) >"
 		self.logout = "quit"
 		# ...
@@ -232,21 +279,7 @@ if __name__=='__main__':
 		"""
 		(options, args) = parser.parse_args()
 		if options.CRON == True:
-			print "Cron job started ... "
-			chef_devices = []
-			i = 0
-			for device_type in self.device_types:
-				#chefarray = chef.exec("who is a " + device_type + "gimme assoc array(hostname,username,password) pls")
-				chefarray = []
-				for chefdev in chefarray:
-					chef_devices[device_type][i] = chefdev
-					i=i+1
-			# merge the results with static entries
-			alldevices = self.static_devices + chef_devices
-			# perform the backups
-			for device_type in self.device_types:
-				for key in alldevices:
-					do_backup(device_type, alldevices[device_type][key]["hostname"], alldevices[device_type][key]["username"], alldevices[device_type][key]["password"])
+			sdn().perform_backup_cron()
 		else:
 			# check the basic info
 			if options.USER and options.HOST:
@@ -254,6 +287,8 @@ if __name__=='__main__':
 			else:
 				raise Exception("Usage: python backup.py -u user -p pass -x host OR python backup.py --cron")
 			print "Performing backup on device %s, type %s ... " % (options.HOST,options.TYPE)
-			do_backup(options.TYPE, options.HOST, options.USER, options.PASS)
+			dobackup   = sdn(options.TYPE, options.HOST, options.USER, options.PASS)
+			dobackup.perform_backup()
+			dobackup.commit_changes()
 	except Exception as e:
 		print e
