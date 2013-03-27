@@ -58,12 +58,14 @@ class sdn:
 							{'username':	'admin'},
 							{'password':	'silverlining'},
 							],
+					},
 					{	'arista':	
 							[
 							{'hostname':	'192.168.112.4'},
 							{'username':	'dtaylortest'},
 							{'password':	'dtaylortest'},
 							],
+					},
 					{	'arista':
 							[
 							{'hostname':	'192.168.112.5'},
