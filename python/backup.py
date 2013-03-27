@@ -56,21 +56,21 @@ class sdn:
 							[
 							{'hostname':	'192.168.112.1'},
 							{'username':	'admin'},
-							{'password':	'silverlining'},
+							{'password':	'xxxx'},
 							],
 					},
 					{	'arista':	
 							[
 							{'hostname':	'192.168.112.4'},
 							{'username':	'dtaylortest'},
-							{'password':	'dtaylortest'},
+							{'password':	'xxxx'},
 							],
 					},
 					{	'arista':
 							[
 							{'hostname':	'192.168.112.5'},
 							{'username':	'dtaylortest'},
-							{'password':	'dtaylortest'},
+							{'password':	'xxxx'},
 							]
 					}]
 	def check_device_type(self):
