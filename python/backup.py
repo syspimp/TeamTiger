@@ -53,25 +53,25 @@ class sdn:
 		# this uses the device_type as a key
 		self.static_devices = [{	
 						'quanta':	
-							[
-							{'hostname':	'192.168.112.1'},
-							{'username':	'admin'},
-							{'password':	'xxxx'},
-							],
+							[{
+							'hostname':	'192.168.112.1',
+							'username':	'admin',
+							'password':	'xxxx',
+							}],
 					},
 					{	'arista':	
-							[
-							{'hostname':	'192.168.112.4'},
-							{'username':	'dtaylortest'},
-							{'password':	'xxxx'},
-							],
+							[{
+							'hostname':	'192.168.112.4',
+							'username':	'dtaylortest',
+							'password':	'xxxx',
+							}],
 					},
 					{	'arista':
-							[
-							{'hostname':	'192.168.112.5'},
-							{'username':	'dtaylortest'},
-							{'password':	'xxxx'},
-							]
+							[{
+							'hostname':	'192.168.112.5',
+							'username':	'dtaylortest',
+							'password':	'xxxx',
+							}]
 					}]
 	def check_device_type(self):
 		# device types are functions which perform the work
@@ -101,15 +101,41 @@ class sdn:
 					i=i+1
 			# merge the results with static entries
 			#alldevices = self.static_devices + chef_devices
-			print self.static_devices
+			alldevices =[]
+			#print self.static_devices
 			# perform the backups
+			print self.static_devices
+			print "all devices above"
 			for device_type in self.device_types:
+				try:
+					for staticdevs in self.static_devices:
+						#print staticdevs
+						#print "staticdevs"
+						try:
+							for staticdev in staticdevs[device_type]:
+								print device_type
+								print "device_type"
+								print staticdev
+								print "staticdev"
+								self.username=staticdev["username"]
+								self.password=staticdev["password"]
+								self.hostname=staticdev["hostname"]
+								self.device_type=device_type
+								self.perform_backup()		
+
+						except Exception,e:
+							pass
+#							for i in e:
+#								print "Staticdev Exception is: %s" % i
+				except Exception,e:
+					for i in e:
+						print "Staticdevs Exception is: %s" % i
 				for key in alldevices:
 					self.username=alldevices[device_type][key]["username"]
 					self.password=alldevices[device_type][key]["password"]
 					self.hostname=alldevices[device_type][key]["hostname"]
 					self.device_type=device_type
-					perform_backup()
+					self.perform_backup()
 
 	def perform_backup(self):
 		# sanity check
