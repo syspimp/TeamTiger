@@ -24,10 +24,8 @@ parser.add_option("-k", "--key", type="string", dest="SSHKEY", help="The path to
 if __name__=='__main__':
 	try:
 		"""
-		perform chef query to pull in devices and device_type
-		however magical this may work
-		will chef provide a list prior to run or are we querying it during a cron run?
-		this is to query during the run
+		test whether we are a cron run,
+		or only doing one device
 		"""
 		(options, args) = parser.parse_args()
 		if options.CRON == True:
