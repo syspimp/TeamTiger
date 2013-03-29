@@ -14,6 +14,7 @@ class RunCommand(cmd.Cmd):
 		self.hosts = []
 		self.connections = []
 		self.timeout=5
+		self.device_type=None
 
 	def do_add_host(self, args):
 		"""add_host 
@@ -53,20 +54,26 @@ class RunCommand(cmd.Cmd):
 	def do_add_aristas(self,args):
 		"""add_aristas
 		Add all the static aristas to host list"""
-		aristas=[]
-		s_arista=''
+		self.add_static_hosts('arista')
+
+	def do_add_quantas(self,args):
+		"""add_quantas
+		Add all the static aristas to host list"""
+		self.add_static_hosts('quanta')
+
+	def add_static_hosts(self,device_type):
+		self.device_type=device_type
 		for staticdevs in sdn.config.static_devices:
-			#print staticdevs
-			#print "staticdevs"
 			try:
-				for staticdev in staticdevs['arista']:
-					s_arista=staticdev["hostname"] + ','+staticdev["username"]+','+staticdev["password"]
+				for staticdev in staticdevs[self.device_type]:
 					self.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"]])
 			except:
 				pass
-		self.prompt = 'sdn - aristas > '
+		self.prompt = 'sdn - %s > ' % self.device_type
 
-
+	def do_backup(self,args):
+		return
+		
 	def do_close(self, args):
 		for conn in self.connections:
 			conn.close()
@@ -78,9 +85,12 @@ class RunCommand(cmd.Cmd):
 		except:
 			pass
 		sys.exit(0)
+
 	def do_list(self,args):
 		print self.hosts
 
+	def do_ban_ip(self,attacker):
+		print "Banning IP %s" % attacker
 if __name__ == '__main__':
 	RunCommand().cmdloop()
 
