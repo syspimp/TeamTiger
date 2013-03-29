@@ -28,12 +28,15 @@ class RunCommand(cmd.Cmd):
 			client = paramiko.SSHClient()
 			client.set_missing_host_key_policy(
 				paramiko.AutoAddPolicy())
-			client.connect(host[0], 
-				username=host[1], 
-				password=host[2],
-				timeout=5)
-			self.connections.append(client)
-		self.prompt = self.prompt.replace('>','#')
+			try:
+				client.connect(host[0], 
+					username=host[1], 
+					password=host[2],
+					timeout=5)
+				self.connections.append(client)
+				self.prompt = self.prompt.replace('>','#')
+			except:
+				print "could not connect to %s" % host[0]
 
 	def do_run(self, command):
 		"""run 
@@ -67,6 +70,7 @@ class RunCommand(cmd.Cmd):
 	def do_close(self, args):
 		for conn in self.connections:
 			conn.close()
+		self.prompt = self.prompt.replace('#','>')
 
 	def do_quit(self, args):
 		try:
@@ -74,6 +78,9 @@ class RunCommand(cmd.Cmd):
 		except:
 			pass
 		sys.exit(0)
+	def do_list(self,args):
+		print self.hosts
+
 if __name__ == '__main__':
 	RunCommand().cmdloop()
 
