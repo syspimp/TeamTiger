@@ -75,9 +75,11 @@ class actions():
 		self.prepare_tftproot()
 		
 		# generate command to run
-		exec("cmd=devices(self.device_type,self.hostname,self.username,self.password).%s_backup()" % self.device_type)
+		exec("cmd=devices(self.device_type,self.hostname,self.username,self.password,debug=%s).%s_backup()" % (self.debug,self.device_type))
 		# execute based on access_type to device_type mapping
-		exec("access(self.device_type,self.hostname,self.username,self.password)._%s_access(cmd)" % config.access_types[self.device_type])
+		self.debugit("cmd chat script:")
+		self.debugit(cmd)
+		exec("access(self.device_type,self.hostname,self.username,self.password,debug=%s)._%s_access(cmd)" % (self.debug,config.access_types[self.device_type]))
 
 	def commit_changes(self):
 		# svn commit -m "Another commit from backup cron"

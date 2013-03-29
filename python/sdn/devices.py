@@ -50,6 +50,7 @@ class devices():
 
 	def ciscoswitch_backup(self):
 		# perform cisco backup
+		self.debugit("Making chat script for ciscoswitch")
 		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
 				},
 				{	"write":	"",
@@ -69,6 +70,7 @@ class devices():
 	def ciscorouter_backup(self):
 		# perform cisco backup
 		#cmd = ["copy", "running-config", self.backupdest]
+		self.debugit("Making chat script for ciscorouter")
 		cmd=	[{	"write":	"copy running-config "+ self.backupdest,
 				},
 				{	"write":	"",
@@ -83,11 +85,13 @@ class devices():
 
 	def ciscoasa_backup(self):
 		# perform asa backup
+		self.debugit("Making chat script for ciscoasa")
 		return ciscorouter_backup(self.backupdest)
 
 	def arista_backup(self):
 		# ...
 		#cmd = ["show", "version", self.backupdest]
+		self.debugit("Making chat script for arista")
 		cmd=	[
 				{	"write":	"show version",
 				},
@@ -110,6 +114,7 @@ class devices():
 		return
 	def quanta_backup(self):
 		# ...
+		self.debugit("Making chat script for quanta")
 		cmd=	[	{	"write":	"show serial",
 #					"read":		"--More--"
 				}

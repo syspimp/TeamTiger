@@ -14,6 +14,7 @@ class access():
 		self.device_type=device_type
 		self.debug=debug
 		self.sshkey=sshkey
+
 	def debugit(self,msg):
 		if self.debug is not False:
 			print msg

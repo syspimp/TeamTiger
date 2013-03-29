@@ -2,12 +2,13 @@
 import sdn
 import sys
 import paramiko
-import cmd
-
+import cmd, logging
+logging.getLogger('backup').addHandler(logging.NullHandler())
 class sdncli(cmd.Cmd,object):
 	""" Simple shell to run a command on the host """
 
 	prompt = 'sdn > '
+	debug=True
 
 	def __init__(self):
 		cmd.Cmd.__init__(self)
@@ -15,7 +16,7 @@ class sdncli(cmd.Cmd,object):
 		self.connections = []
 		self.timeout=5
 		self.device_type=None
-		self.debug=True
+		
 		self.defaultprompt=self.prompt
 
 	def do_connect(self, args):
@@ -51,16 +52,7 @@ class sdncli(cmd.Cmd,object):
 			conn.close()
 		self.prompt = self.prompt.replace('#','>')
 
-	def do_exit(self, args):
-		do_quit(args)
 
-	def do_quit(self, args):
-		if raw_input('really quit ?(y/n):')=='y':
-			try:
-				do_close('all')
-			except:
-				pass
-			sys.exit(0)
 
 	def do_add_aristas(self,args):
 		"""add_aristas
@@ -77,7 +69,7 @@ class sdncli(cmd.Cmd,object):
 		for staticdevs in sdn.config.static_devices:
 			try:
 				for staticdev in staticdevs[self.device_type]:
-					self.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"]])
+					self.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],self.device_type])
 			except:
 				pass
 		self.prompt = 'sdn - %s > ' % self.device_type
@@ -94,7 +86,12 @@ class sdncli(cmd.Cmd,object):
 			except:
 				pass
 		else:
-			print "usage: host "
+			hostname=raw_input('host or ip?')
+			username=raw_input('username?')
+			password=raw_input('password?')
+			device=raw_input('device_type (arista,quanta,etc)?')
+			self.hosts.append([hostname,username,password])
+			self.device_type=device
 
 	def do_clear(self,args):
 		"""clear
@@ -119,6 +116,7 @@ class sdncli(cmd.Cmd,object):
 		Lists all hosts in host list"""
 		print "Loaded hosts:"
 		print self.hosts
+		print "Current Device Type is %s" % self.device_type
 
 	def do_ban_ip(self,attacker):
 		if self.device_type is not None:
@@ -132,7 +130,18 @@ class sdncli(cmd.Cmd,object):
 
 	def emptyline(self):
 		return cmd.Cmd.emptyline(self)
-		
+
+	def do_exit(self, args):
+		do_quit(args)
+
+	def do_quit(self, args):
+		if raw_input('really quit ?(y/n):')=='y':
+			try:
+				do_close('all')
+			except:
+				pass
+			sys.exit(0)
+
 if __name__ == '__main__':
 	sdncli().cmdloop()
 
