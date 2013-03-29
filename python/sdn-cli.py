@@ -4,7 +4,7 @@ import sys
 import paramiko
 import cmd
 
-class RunCommand(cmd.Cmd):
+class sdncli(cmd.Cmd,object):
 	""" Simple shell to run a command on the host """
 
 	prompt = 'sdn > '
@@ -16,6 +16,7 @@ class RunCommand(cmd.Cmd):
 		self.timeout=5
 		self.device_type=None
 		self.debug=True
+		self.defaultprompt=self.prompt
 
 	def do_connect(self, args):
 		"""Connect to all hosts in the hosts list"""
@@ -50,12 +51,16 @@ class RunCommand(cmd.Cmd):
 			conn.close()
 		self.prompt = self.prompt.replace('#','>')
 
+	def do_exit(self, args):
+		do_quit(args)
+
 	def do_quit(self, args):
-		try:
-			do_close('all')
-		except:
-			pass
-		sys.exit(0)
+		if raw_input('really quit ?(y/n):')=='y':
+			try:
+				do_close('all')
+			except:
+				pass
+			sys.exit(0)
 
 	def do_add_aristas(self,args):
 		"""add_aristas
@@ -64,7 +69,7 @@ class RunCommand(cmd.Cmd):
 
 	def do_add_quantas(self,args):
 		"""add_quantas
-		Add all the static aristas to host list"""
+		Add all the static quantas to host list"""
 		self.add_static_hosts('quanta')
 
 	def add_static_hosts(self,device_type):
@@ -91,11 +96,16 @@ class RunCommand(cmd.Cmd):
 		else:
 			print "usage: host "
 
-	def do_clear_hosts(self,args):
+	def do_clear(self,args):
+		"""clear
+		Clears the host list, prompt"""
 		self.hosts = []
-		self.prompt = 'sdn > '
+		self.prompt = self.defaultprompt
+		self.device_type=None
 
 	def do_backup(self, args):
+		"""backup 
+		performs a backup on the device"""
 		if self.device_type is not None:
 			for host in self.hosts:
 				print "Backing up %s" % host[0]
@@ -105,20 +115,24 @@ class RunCommand(cmd.Cmd):
 			print "Not connected or configured"
 
 	def do_list(self,args):
-		"""add_host 
-		Add the host to the host list"""
+		"""list 
+		Lists all hosts in host list"""
 		print "Loaded hosts:"
 		print self.hosts
 
 	def do_ban_ip(self,attacker):
 		if self.device_type is not None:
 			for host in self.hosts:
-				print "Banning IP %s" % attacker
 				banhammer=sdn.actions(self.device_type, host[0], host[1], host[2],debug=self.debug)
-				print banhammer
 				banhammer.ban_ip(attacker)
 
+	def postloop(self):
+		print 'Later...'
+		super(sdncli,self).postloop()
 
+	def emptyline(self):
+		return cmd.Cmd.emptyline(self)
+		
 if __name__ == '__main__':
-	RunCommand().cmdloop()
+	sdncli().cmdloop()
 
