@@ -20,6 +20,8 @@ parser.add_option("-d", "--destination",  type="string", dest="DESTINATION", hel
 parser.add_option("-c", "--cron", action="store_true", dest="CRON", help="Run as a cron", default=False)
 parser.add_option("-k", "--key", type="string", dest="SSHKEY", help="The path to the SSH Key to use.", default=False)
 
+# global debug switch
+bigbadbug=True
 		
 if __name__=='__main__':
 	try:
@@ -29,7 +31,7 @@ if __name__=='__main__':
 		"""
 		(options, args) = parser.parse_args()
 		if options.CRON == True:
-			sdn.actions.perform_backup_cron()
+			sdn.actions(debug=bigbadbug).perform_backup_cron()
 		else:
 			# check the basic info
 			if options.USER and options.HOST:
@@ -37,7 +39,7 @@ if __name__=='__main__':
 			else:
 				raise Exception("Usage: python backup.py -u user -p pass -x host OR python backup.py --cron")
 			print "Performing backup on device %s, type %s ... " % (options.HOST,options.TYPE)
-			dobackup = sdn.actions(options.TYPE, options.HOST, options.USER, options.PASS, debug=True)
+			dobackup = sdn.actions(options.TYPE, options.HOST, options.USER, options.PASS, debug=bigbadbug)
 			dobackup.perform_backup()
 			dobackup.commit_changes()
 	except Exception as e:

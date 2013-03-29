@@ -1,7 +1,7 @@
 from sdn import config,devices,access
 
 class actions():
-	def __init__(self,device_type,hostname,username=config.username,password=config.password,debug=False):
+	def __init__(self,device_type='',hostname='',username=config.username,password=config.password,debug=False):
 		try:
 			self.device=devices(device_type,hostname,username,password)
 		except:
