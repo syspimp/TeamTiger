@@ -15,14 +15,8 @@ class RunCommand(cmd.Cmd):
 		self.connections = []
 		self.timeout=5
 		self.device_type=None
+		self.debug=True
 
-	def do_add_host(self, args):
-		"""add_host 
-		Add the host to the host list"""
-		if args:
-			self.hosts.append(args.split(','))
-		else:
-			print "usage: host "
 	def do_connect(self, args):
 		"""Connect to all hosts in the hosts list"""
 		for host in self.hosts:
@@ -51,6 +45,18 @@ class RunCommand(cmd.Cmd):
 		else:
 			print "usage: run "
 
+	def do_close(self, args):
+		for conn in self.connections:
+			conn.close()
+		self.prompt = self.prompt.replace('#','>')
+
+	def do_quit(self, args):
+		try:
+			do_close('all')
+		except:
+			pass
+		sys.exit(0)
+
 	def do_add_aristas(self,args):
 		"""add_aristas
 		Add all the static aristas to host list"""
@@ -71,26 +77,48 @@ class RunCommand(cmd.Cmd):
 				pass
 		self.prompt = 'sdn - %s > ' % self.device_type
 
-	def do_backup(self,args):
-		return
-		
-	def do_close(self, args):
-		for conn in self.connections:
-			conn.close()
-		self.prompt = self.prompt.replace('#','>')
+	def do_add_host(self, args):
+		"""add_host 
+		Add the host to the host list"""
+		if args:
+			hosts=args.split(',')
+			self.hosts.append(hosts)
+			try:
+				if hosts[3]:
+					self.device_type=hosts[3]
+			except:
+				pass
+		else:
+			print "usage: host "
 
-	def do_quit(self, args):
-		try:
-			do_close('all')
-		except:
-			pass
-		sys.exit(0)
+	def do_clear_hosts(self,args):
+		self.hosts = []
+		self.prompt = 'sdn > '
+
+	def do_backup(self, args):
+		if self.device_type is not None:
+			for host in self.hosts:
+				print "Backing up %s" % host[0]
+				guardian_angel=sdn.actions(self.device_type, host[0], host[1], host[2],debug=self.debug)
+				guardian_angel.perform_backup()
+		else:
+			print "Not connected or configured"
 
 	def do_list(self,args):
+		"""add_host 
+		Add the host to the host list"""
+		print "Loaded hosts:"
 		print self.hosts
 
 	def do_ban_ip(self,attacker):
-		print "Banning IP %s" % attacker
+		if self.device_type is not None:
+			for host in self.hosts:
+				print "Banning IP %s" % attacker
+				banhammer=sdn.actions(self.device_type, host[0], host[1], host[2],debug=self.debug)
+				print banhammer
+				banhammer.ban_ip(attacker)
+
+
 if __name__ == '__main__':
 	RunCommand().cmdloop()
 

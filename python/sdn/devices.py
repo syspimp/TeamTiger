@@ -6,15 +6,15 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
 from sdn import config
 
 class devices():
-	def __init__(self,device_type,hostname,username='',password='',terminalprompt='',logout='',backupdest='',tftpserver='',destination='backups'):
+	def __init__(self,device_type,hostname,username='',password='',terminalprompt='',logout='',backupdest='',tftpserver='',destination='backups',debug=False):
 		# sanity check
 		self.device_type=device_type
-		check_device_type()
+		self.check_device_type()
 		# lets go!
 		self.hostname=hostname
 		self.username=username
 		self.password=password
-
+		self.debug=debug
 		self.tftpserver=tftpserver
 		if terminalprompt == '':
 			self.terminalprompt = config.terminalprompts[device_type]
@@ -30,16 +30,22 @@ class devices():
 		
 		return
 
+	def debugit(self,msg):
+		if self.debug is not False:
+			print msg
+
 	def check_device_type(self):
 		# device types are functions which perform the work
 		# so we make sure the device_type is known
 		checkit = self.device_type
 		if checkit not in config.device_types:
-			print "Device Type %s" % checkit
+			msg="Device Type "+checkit
+			self.debugit(msg)
 			raise Exception("Device Type is not known")
 	
 		if checkit not in config.access_types:
-			print "Access Type %s" % checkit
+			msg="Access Type "+checkit
+			self.debugit(msg)
 			raise Exception("Access Type  is not known")
 
 	def ciscoswitch_backup(self):

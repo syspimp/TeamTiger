@@ -1,18 +1,29 @@
-from sdn import config
+from sdn import config,devices,access
 
 class actions():
-	def __init__(self,device_type,hostname,username=config.username,password=config.password):
+	def __init__(self,device_type,hostname,username=config.username,password=config.password,debug=False):
 		try:
 			self.device=devices(device_type,hostname,username,password)
 		except:
 			print "LOL give it up, you can't win!"
+		self.debug=debug
+		self.device_type=device_type
+		self.hostname=hostname
+		self.username=username
+		self.password=password
+
+
+	def debugit(self,msg):
+		if self.debug is not False:
+			print msg
 
 	def prepare_tftproot(self):
 		#is the file there? chmod'ed 777 ?
-		print "TFTP preparing!"
+		self.debugit("TFTP preparing!")
 		return
+
 	def perform_backup_cron(self):
-			print "Cron job started ... "
+			self.debugit("Cron job started ... ")
 			chef_devices = []
 			i = 0
 			for device_type in config.device_types:
@@ -26,19 +37,17 @@ class actions():
 			alldevices =[]
 			#print self.static_devices
 			# perform the backups
-			print config.static_devices
-			print "all devices above"
+			self.debugit("perform_backup_cron: all devices")
+			self.debugit(config.static_devices)
 			for device_type in config.device_types:
 				try:
 					for staticdevs in config.static_devices:
-						#print staticdevs
-						#print "staticdevs"
 						try:
 							for staticdev in staticdevs[device_type]:
-								print device_type
-								print "device_type"
-								print staticdev
-								print "staticdev"
+								self.debugit("perform_backup_cron: device_type")
+								self.debugit(device_type)
+								self.debugit("perform_backup_cron: staticdev")
+								self.debugit(staticdev)
 								self.username=staticdev["username"]
 								self.password=staticdev["password"]
 								self.hostname=staticdev["hostname"]
@@ -60,16 +69,20 @@ class actions():
 					self.perform_backup()
 
 	def perform_backup(self):
+		msg="Performing "+self.device_type+" "+config.access_types[self.device_type]+" backup"
+		self.debugit(msg)
 		# sanity check
-		device.prepare_tftproot()
-		print "Performing %s %s backup" % (self.device_type,self.access_types[self.device_type])
+		self.prepare_tftproot()
+		
 		# generate command to run
-		exec("cmd=self.%s_backup()" % self.device_type)
+		exec("cmd=devices(self.device_type,self.hostname,self.username,self.password).%s_backup()" % self.device_type)
 		# execute based on access_type to device_type mapping
-		exec("self._%s_access(cmd)" % self.access_types[self.device_type])
+		exec("access(self.device_type,self.hostname,self.username,self.password)._%s_access(cmd)" % config.access_types[self.device_type])
 
 	def commit_changes(self):
 		# svn commit -m "Another commit from backup cron"
 		return
-	def banIP(self):
+
+	def ban_ip(self,attacker):
+		self.debugit("Banning IP "+attacker+"! Complete!")
 		return
