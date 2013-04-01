@@ -518,5 +518,5 @@ class SdnBot(GtalkRobot):
 if __name__ == "__main__":
 	bot = SdnBot(debug=bigbadbug)
 	bot.setState('available', "How may I help?")
-	bot.start("tfound.assistant@gmail.com", "p1zz4t1m3")
+	bot.start("mygmailaccount@gmail.com", "xxxxxx")
 	#bot.replyMessage("private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com","Happy New Year!")
