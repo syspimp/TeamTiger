@@ -67,10 +67,16 @@ sdn backup
 xbmc -- Xbox Media Center module
 
 xbmc what
-    what is playing
+
+    see what is playing
 
 xbmc play|pause
+
     toggle play/pause
+
+xbmc switch
+    
+    switch to the next xbmc server in the list
 
 
 zen -- Zenoss monitoring module
