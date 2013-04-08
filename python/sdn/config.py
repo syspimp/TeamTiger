@@ -1,19 +1,20 @@
-
-authorized_admins=['under.my.control@gmail.com','private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com','private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com','1marsara1@gmail.com']
+debug=False
+room='private-chat67db6@groupchat.google.com/bot'
+authorized_admins=['user1@gmail.com','user2@gmail.com']
 rootusername='root'
 rootpassword='xxxxx'
-username='dtaylortest'
-password='dtaylortest'
+username='test'
+password='xxxx'
 xbmcusername='xbmc'
 xbmcpassword='xbmc'
 xbmcport='8081'
 xbmchostname='10.55.2.161'
 zenossuser='admin'
-zenosspass='xxxxx'
+zenosspass='xxxx'
 sshkey=None
 # device types allowed
 # these will have methods defined
-device_types = ['linux','ciscoswitch','arista','ciscoasa','ciscorouter','quanta','xbmc']
+device_types = ['hpswitch','linux','ciscoswitch','arista','ciscoasa','ciscorouter','quanta','xbmc','chefclient','chefserver']
 zenosshost = 'http://admin3.tfound.org:8080'
 
 # mapping of devices to access type, 
@@ -55,6 +56,8 @@ tfound_devices = [{
 					'hostname':	'10.55.2.155',
 					'username':	rootusername,
 					'password':	rootpassword,
+					'label':	'openstack-nova',
+					'port':		'22'
 					}],
 			},
 			{	'linux':	
@@ -62,13 +65,26 @@ tfound_devices = [{
 					'hostname':	'10.55.2.161',
 					'username':	rootusername,
 					'password':	rootpassword,
+					'label':	'master',
+					'port':		'22'
 					}],
 			},
-			{	'linux':
+			{	'chefserver':
 					[{
 					'hostname':	'10.55.20.7',
 					'username':	rootusername,
 					'password':	rootpassword,
+					'label':	'chef-server',
+					'port':		'22'
+					}]
+			},
+			{	'chefclient':
+					[{
+					'hostname':	'10.55.20.8',
+					'username':	rootusername,
+					'password':	rootpassword,
+					'label':	'mrtg-tftp-sdnbot',
+					'port':		'22'
 					}]
 			},
 			{	'xbmc':
@@ -77,7 +93,7 @@ tfound_devices = [{
 					'username':	xbmcusername,
 					'password':	xbmcpassword,
 					'port':		'8081',
-					'label':	'master'
+					'label':	'masterxbmc'
 					}]
 			},
 			{	'xbmc':
@@ -86,15 +102,36 @@ tfound_devices = [{
 					'username':	xbmcusername,
 					'password':	xbmcpassword,
 					'port':		'8080',
-					'label':	'frontroom'
+					'label':	'frontroom-droid'
 					}]
-			}]
+			},
+			{	'ciscorouter':
+					[{
+					'hostname':	'10.55.2.1',
+					'username':	rootusername,
+					'password':	rootpassword,
+					'port':		'23',
+					'label':	'gateway router'
+					}]
+			},
+			{	'hpswitch':
+					[{
+					'hostname':	'10.55.2.3',
+					'username':	rootusername,
+					'password':	rootpassword,
+					'port':		'23',
+					'label':	'core switch'
+					}]
+			},
+			]
 dal2_devices = [{	
 				'quanta':	
 					[{
 					'hostname':	'192.168.112.1',
 					'username':	'admin',
 					'password':	password,
+					'label':	'quanta1',
+					'port':		'22'
 					}],
 			},
 			{	'arista':	
@@ -102,6 +139,8 @@ dal2_devices = [{
 					'hostname':	'192.168.112.4',
 					'username':	username,
 					'password':	password,
+					'label':	'arista4',
+					'port':		'22'
 					}],
 			},
 			{	'arista':
@@ -109,6 +148,8 @@ dal2_devices = [{
 					'hostname':	'192.168.112.5',
 					'username':	username,
 					'password':	password,
+					'label':	'arista5',
+					'port':		'22'
 					}]
 			}]
 static_devices = dal2_devices

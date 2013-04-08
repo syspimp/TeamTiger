@@ -22,7 +22,8 @@ class xbmc():
 		self.reqCount=1
 		self.playerid=None
 		self.whattype=None
-
+		self.xbmchosts=[]
+		self.xbmcactive=0
 		print "url is %s" % self.url
 
 	def debugit(self,msg):
@@ -57,11 +58,12 @@ class xbmc():
 
 	def play_pause(self):
 		data ={}
-		if not self.playerid:
-			print "see whats playing first"
-			return False
-		else:
-			data['playerid'] = self.playerid
+		#if not self.playerid:
+		#	print "see whats playing first"
+		#	return False
+		#else:
+		#	data['playerid'] = self.playerid
+		data['playerid'] = 1
 		return self._router_request('Player.PlayPause', data)
 
 	def get_item(self,itemtype,playerid):
@@ -78,14 +80,24 @@ class xbmc():
 			
 		try:
 			getitem=self._router_request('Player.GetItem', data, idtype=idtype)
-			for key in getitem:
-				print "key is %s" % key['result']['item']['label']
-				return key['result']['item']['label']
-				#for item in key['result']:
-				#	print "item is %s" % item
-				#	player=item['playerid']
-				#	whattype=item['type']
-				#	return self.get_item(whattype,player)
+			print "got it"
+			if itemtype == 'video':
+				print "video getitem is below"
+				print getitem
+				for key in getitem:
+					print "key is %s" % key['result']['item']['label']
+					return key['result']['item']['label']
+					#for item in key['result']:
+					#	print "item is %s" % item
+					#	player=item['playerid']
+					#	whattype=item['type']
+					#	return self.get_item(whattype,player)
+			if itemtype == 'audio':
+				print "getitem is below"
+				print getitem
+				for key in getitem:
+					print "key is below"
+					print key
 		except Exception, e:
 			print "xmbc.get_item: i could not find out what is playing"
 			for i in e:
@@ -95,6 +107,8 @@ class xbmc():
 		data ={}
 		whatisplaying=self._router_request('Player.GetActivePlayers', data)
 		try:
+			print "what try loop, whatisplaying is below"
+			print whatisplaying
 			for key in whatisplaying:
 				print "xbmc.what: key is %s" % key
 				for item in key['result']:
@@ -104,6 +118,7 @@ class xbmc():
 					return self.get_item(self.whattype,self.playerid)
 		except Exception, e:
 			print "xbmc.what: i could not find out what is playing"
+			print item
 			for i in e:
 				print i
 			pass

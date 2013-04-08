@@ -25,7 +25,8 @@ import xmpp
 import urllib
 import re
 import inspect
-
+import time
+from sdn import config
 """A simple jabber/xmpp bot framework
 
 This is a simple jabber/xmpp bot framework using Regular Expression Pattern as command controller.
@@ -49,6 +50,7 @@ class GtalkRobot:
     commands = None
     command_prefix = 'command_'
     GO_TO_NEXT_COMMAND = 'go_to_next'
+    room=config.room
     ########################################################################################################################
     
     #Pattern Tips:
@@ -89,17 +91,18 @@ class GtalkRobot:
             pres=xmpp.Presence(priority=5, show=self.show, status=self.status)
             self.conn.send(pres)
             #join room
-            room = "private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com/tfound.assistant"
-            print "Joining " + room
-            press=xmpp.Presence(priority=5, show=self.show, status=self.status,to=room)
+            #room = "private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com/tfound.assistant"
+            print "Joining " + self.room
+            press=xmpp.Presence(priority=5, show=self.show, status=self.status,to=self.room)
             self.conn.send(press)
-            self.conn.send(xmpp.Message(room,"Happy New Year!"))
+            self.conn.send(xmpp.Message(self.room,"Happy New Year!"))
 
     def getState(self):
         return self.show, self.status
 
     def replyMessage(self, user, message):
         self.conn.send(xmpp.Message(user, message))
+        time.sleep(1)
 
     def getRoster(self):
         return self.conn.getRoster()
@@ -137,6 +140,9 @@ class GtalkRobot:
     def controller(self, conn, message):
         text = message.getBody()
         user = message.getFrom()
+        if message.getType() == "error":
+            time.sleep(2)
+            return
         if message.getType() == "groupchat":
             print str(message.getFrom()) +": "+  str(message.getBody())
         #if message.getType() == "chat":
@@ -172,6 +178,7 @@ class GtalkRobot:
     def StepOn(self):
         try:
             self.conn.Process(1)
+            time.sleep(1)
         except KeyboardInterrupt: 
             return 0
         return 1
@@ -188,7 +195,9 @@ class GtalkRobot:
         self.server_host = server_host
         self.server_port = server_port
 
-    def start(self, gmail_account, password):
+    def start(self, gmail_account, password,room=''):
+        if room:
+            self.room=room
         jid=xmpp.JID(gmail_account)
         user, server, password = jid.getNode(), jid.getDomain(), password
         

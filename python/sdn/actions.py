@@ -75,12 +75,63 @@ class actions():
 		self.prepare_tftproot()
 		
 		# generate command to run
-		exec("cmd=devices(self.device_type,self.hostname,self.username,self.password,debug=%s).%s_backup()" % (self.debug,self.device_type))
-		# execute based on access_type to device_type mapping
-		self.debugit("cmd chat script:")
-		self.debugit(cmd)
-		exec("access(self.device_type,self.hostname,self.username,self.password,debug=%s)._%s_access(cmd)" % (self.debug,config.access_types[self.device_type]))
+		try:
+			exec("cmd=devices(self.device_type,self.hostname,self.username,self.password,debug=%s).%s_backup()" % (self.debug,self.device_type))
+			# execute based on access_type to device_type mapping
+			self.debugit("cmd chat script:")
+			self.debugit(cmd)
+		except:
+			print "Exception generating chat script for device %s, continue..." % self.device_type
+			pass
+		try:
+			if cmd:
+				exec("access(self.device_type,self.hostname,self.username,self.password,debug=%s)._%s_access(cmd)" % (self.debug,config.access_types[self.device_type]))
+		except:
+			print "Exception in perform_backup, cmd prolly empty, no worries."
+			pass
 
+	def chef_knife(self,cmds):
+		msg="Performing knife cmd "+cmds
+		self.debugit(msg)
+		# sanity check
+		
+		# generate command to run
+		try:
+			cmd=devices(self.device_type,self.hostname,self.username,self.password).chefserver_knife(cmds)
+			# execute based on access_type to device_type mapping
+			self.debugit("cmd chat script:")
+			self.debugit(cmd)
+		except Exception,e:
+			print "Exception generating chat script for device %s, continue..." % self.device_type
+			for i in e:
+				print i
+			pass
+		try:
+			if cmd:
+				return access(self.device_type,self.hostname,"ubuntu",self.password,sshkey="/home/ubuntu/.ssh/dtaylor-openstack.priv")._ssh_access(cmd)
+		except:
+			print "Exception in chef knife."
+			pass
+	def chef_bootstrap(self,cmds):
+		msg="Performing bootstrap "+cmds
+		self.debugit(msg)
+		# sanity check
+		
+		# generate command to run
+		try:
+			cmd=devices(self.device_type,self.hostname,self.username,self.password).chefserver_bootstrap(cmds)
+			# execute based on access_type to device_type mapping
+			self.debugit("cmd chat script:")
+			self.debugit(cmd)
+		except:
+			print "Exception generating chat script for device %s, continue..." % self.device_type
+			pass
+		try:
+			if cmd:
+				return access(self.device_type,self.hostname,"ubuntu",self.password,debug=self.debug,sshkey="/home/ubuntu/.ssh/dtaylor-openstack.priv")._ssh_access(cmd)
+		except:
+			print "Exception in chef bootstrap."
+			pass
 	def commit_changes(self):
 		# svn commit -m "Another commit from backup cron"
 		return

@@ -70,6 +70,7 @@ class access():
 		try:
 			stdin.close()
 			client.close()
+			return data
 		except:
 			pass
  		

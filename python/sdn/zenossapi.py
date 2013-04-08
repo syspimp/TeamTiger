@@ -72,12 +72,15 @@ class zenossapi:
 		# Increment the request count ('tid'). More important if sending multiple
 		# calls in a single request
 		self.reqCount += 1
-
-		# Submit the request and convert the returned JSON to objects
-		dump=json.loads(self.urlOpener.open(req, reqData).read())
+		try:
+		    # Submit the request and convert the returned JSON to objects
+		    dump=json.loads(self.urlOpener.open(req, reqData).read())
+		except:
+		    self.__init__()
+		    dump=json.loads(self.urlOpener.open(req, reqData).read())
+		    pass
 		print "zenossapi._router_request = %s" % reqData
-		print "zenossapi._router_result = %s" % dump
-
+		#print "zenossapi._router_result = %s" % dump
 		#return json.loads(self.urlOpener.open(req, reqData).read())
 		return dump
 	
@@ -112,7 +115,8 @@ class zenossapi:
 	def get_event(self, evid=None, component=None, eventClass=None):
 		data = dict(start=0, limit=100, dir='DESC', sort='severity')
 		data['keys'] = ['eventState', 'severity', 'component', 'eventClass', 'summary', 'firstTime', 'lastTime', 'count', 'evid', 'eventClassKey', 'message']
-		data['params'] = dict(severity=[5,4,3,2], eventState=[0,1])
+		#data['params'] = dict(severity=[5,4,3,2], eventState=[0,1])
+		data['params'] = dict(severity=[5,4], eventState=[0,1])
 
 		if component: data['params']['component'] = component
 		if eventClass: data['params']['eventClass'] = eventClass
@@ -124,7 +128,8 @@ class zenossapi:
 	def get_events(self, device=None, component=None, eventClass=None, evid=None):
 		data = dict(start=0, limit=100, dir='DESC', sort='severity')
 		data['keys'] = ['eventState', 'severity', 'component', 'eventClass', 'summary', 'firstTime', 'lastTime', 'count', 'evid', 'eventClassKey', 'message']
-		data['params'] = dict(severity=[5,4,3,2], eventState=[0,1])
+		#data['params'] = dict(severity=[5,4,3,2], eventState=[0,1])
+		data['params'] = dict(severity=[5,4], eventState=[0,1])
 
 		if device: data['params']['device'] = device
 		if component: data['params']['component'] = component

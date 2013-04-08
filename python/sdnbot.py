@@ -53,11 +53,10 @@ class SdnBot(GtalkRobot):
 	debug=True
 	devload=sdncli()
 	z=zenossapi()
-	x=None
-	xbmchosts=[]
-	xbmcactive=0
+	x=xbmc('localhost')
+	#x=None
 	site=None
-
+	devtype=None
 	#"command_" is the command prefix, "001" is the priviledge num, "setState" is the method name.
 	#This method is used to change the state and status text of the bot.
 	def command_001_setState(self, user, message, args):
@@ -118,7 +117,8 @@ class SdnBot(GtalkRobot):
 						if now >= max:
 							break
 						print "doing evt %s" % key
-						msg= "Event id: " +key['evid']+ "\n" + key['eventState'] + ": " + key['summary']
+						msg= "Event id: " +key['evid']+ "\n" + key['eventState'] + ": " + key['summary'] + "\nComponent: " + key['component']['text']
+						msg+="\n================"
 						self.replyMessage(user, msg)
 						time.sleep(2)
 						now=now+1
@@ -189,11 +189,12 @@ class SdnBot(GtalkRobot):
 							search="/zport/dmd/Systems/"
 							pass
 
+					print search
 					devices=self.z.get_devices(search)
 					print devices
 				except Exception, e:
 					for i in e:
-						msg="Exception: %s" % e
+						msg="sndbot.zen.get Exception: %s" % e
 						self.replyMessage(user, msg)
 					
 				for device in devices['devices']:
@@ -249,9 +250,11 @@ class SdnBot(GtalkRobot):
 				if not self.devload.hosts:
 					self.replyMessage(user, "You need to load a site first.")
 				else:
-					self.replyMessage(user, "Site " +self.site+ " is loaded.")
+					self.replyMessage(user, "Site " +self.site+ " is loaded,")
+					if self.devtype:
+						self.replyMessage(user, "only " +self.devtype+ " type.")
 					for host in self.devload.hosts:
-						self.replyMessage(user, "Host "+host[0] + " is loaded.")
+						self.replyMessage(user, host[5] + " ready.")
 			except:
 				self.replyMessage(user, "You need to load a site first.")
 
@@ -285,11 +288,11 @@ class SdnBot(GtalkRobot):
 					msg="Exception: %s" % e
 					self.replyMessage(user, msg)
 				pass
-
-	def command_07_loadSdn(self, user, message, args):
-		'''([Ss]dn)\s+(load|banip)\s+(.*?)\s+(.*?)$'''
-		#'''(sdn)\s+(load|backup|banip)( +(.*))?$(?i)'''
+	# this can be deleted, moved to chef-server cmds
+	def command_07_bootstrapSdn(self, user, message, args):
+		'''([Ss]dn)\s+(bootstrap)( +(.*))?$(?i)'''
 		action=args[1]
+		target=None
 		try:
 			print "args"
 			print args
@@ -300,19 +303,51 @@ class SdnBot(GtalkRobot):
 				target='all'
 		except:
 			pass
+		if action == "bootstrap":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to load a site first.")
+				else:
+					for host in self.devload.hosts:
+						self.replyMessage(user, "Performing knife "+target+" on "+host[0])
+						print host
+						self.devload.device_type=host[3]
+						guardian_angel=actions(host[3], host[0], host[1], host[2],debug=self.debug)
+						self.replyMessage(user, "Backing up "+  host[0])
+						guardian_angel.chef_bootstrap(target)
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+
+	def command_08_loadSdn(self, user, message, args):
+		'''([Ss]dn)\s+(load|banip)( +(.*))?$(?i)'''
+		#'''([Ss]dn)\s+(load|banip)\s+(.*?)\s+(.*?)$'''
+		#'''(sdn)\s+(load|backup|banip)( +(.*))?$(?i)'''
+		action=args[1]
+		try:
+			print "args"
+			print args
+			if args[2] != None:
+				target=args[2].lstrip()
+				target=target.split()
+			else:
+				target=['all']
+		except:
+			pass
 		if action == "load":
-			if target in config.device_types or target == 'site':
-				print "step 1"
-				if target == 'site':
+			if target[0] in config.device_types or target[0] == 'site':
+				print "step 1 target=xx%sxx" % target[0]
+				if target[0] == 'site':
 					try:
-						print "args3 is xx%sxx" % args[3]
-						if args[3] != None:
-							self.site=args[3].lstrip()
-						else:
-							self.site='dal2'
-						self.replyMessage(user, "Loading devices for site "+self.site)
+						if target[1]:
+							self.site=target[1]
 					except:
+						self.site='dal2'
 						pass
+					self.devtype=None
+					self.replyMessage(user, "Loading devices for site "+self.site)
 					print "step 2"
 					try:
 						self.devload.hosts=[]
@@ -327,8 +362,8 @@ class SdnBot(GtalkRobot):
 									#print staticdevs
 									try:
 										for staticdev in staticdevs[device_type]:
-											self.devload.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],device_type])
-											self.replyMessage(user, "Loaded "+staticdev["hostname"])
+											self.devload.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],device_type,staticdev["port"],staticdev["label"]])
+											self.replyMessage(user, "Loaded "+staticdev["label"]+"."+device_type)
 									except:
 										pass
 							except:
@@ -338,7 +373,8 @@ class SdnBot(GtalkRobot):
 						for i in e:
 							msg="Exception: %s" % e
 							self.replyMessage(user, msg)
-				if target in config.device_types:
+				# try loading the device types
+				if target[0] in config.device_types:
 					try:
 						if not self.site:
 							raise Exception()
@@ -347,20 +383,58 @@ class SdnBot(GtalkRobot):
 
 					print "sdn.command_07_loadSdn: pulling in device types"
 					self.devload.hosts = []
+					#print target[0]
 					try:
-						for staticdev in config.static_devices[target]:
-							self.devload.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],target])
-							self.replyMessage(user, "Loaded "+staticdev["hostname"])
-							time.sleep(1)
-					except:
-						msg="Device type %s is not valid." % target
+						exec("sitedevs=config.%s_devices" % self.site)
+						#print sitedevs
+						for staticdev in sitedevs:
+								print staticdev
+								print target[0]
+								try:
+									print "trying"
+									if staticdev[target[0]]:
+										print "match!"
+										print staticdev[target[0]][0]["label"]
+										self.devload.hosts.append([staticdev[target[0]][0]["hostname"],staticdev[target[0]][0]["username"],staticdev[target[0]][0]["password"],target[0],staticdev[target[0]][0]["port"],staticdev[target[0]][0]["label"]])
+										self.devtype=target[0]
+										self.replyMessage(user, "Loaded "+staticdev[target[0]][0]["label"]+"."+target[0])
+										time.sleep(1)
+									else:
+										print "skipping!"
+								except:
+									pass
+					except Exception, e:
+						msg="Device type %s is not valid." % target[0]
 						self.replyMessage(user,msg)
+						for i in e:
+							self.replyMessage(user,"Exception: "+i)
 			else:
-				print "step 4"
-				self.replyMessage(user, "examples: sdn load site dal2 # load all of dal2 devices")
-				self.replyMessage(user, "examples: sdn load quanta # load all quantas")
-				self.replyMessage(user, "examples: sdn add_host 127.0.0.1,root,password,linux # not yet")
-	def command_08_doXbmc(self, user, message, args):
+				#print target[0]
+				try:
+					exec("sitedevs=config.%s_devices" % self.site)
+					#print sitedevs
+					for staticdev in sitedevs:
+						print staticdev
+						for types in staticdev:
+							print types
+							for entry in staticdev[types]:
+								print entry
+								if entry['label'] == target[0]:
+									print "match!"
+									self.devload.hosts = []
+									self.devload.hosts.append([entry["hostname"],entry["username"],entry["password"],target[0],entry["port"],entry["label"]])
+									self.devtype=target[0]
+									self.replyMessage(user, "Loaded "+entry["label"]+"."+target[0])
+									time.sleep(1)
+									break
+				except Exception, e:
+					for i in e:
+						self.replyMessage(user, "Illegal: "+i)
+					self.replyMessage(user, "examples: sdn load site dal2 # load all of dal2 devices")
+					self.replyMessage(user, "examples: sdn load quanta # load all quantas")
+					self.replyMessage(user, "examples: sdn load myserverlabel # load the server labeld myserverlabel")
+
+	def command_09_doXbmc(self, user, message, args):
 		'''([Xx]bmc)\s+(switch|play|pause|what)( +(.*))?$(?i)'''
 		action=args[1]
 		try:
@@ -375,9 +449,9 @@ class SdnBot(GtalkRobot):
 			pass
 		try:
 			if self.site is None:
-				raise Exception("you must pick load site that has xbmc devices.")
+				raise Exception("you must load asite that has xbmc devices.")
 			# try to load the xbmcs
-			if not self.xbmchosts:
+			if not self.x.xbmchosts:
 				exec("sitedevs=config.%s_devices" % self.site)
 				for staticdevs in sitedevs:
 					print staticdevs
@@ -399,67 +473,85 @@ class SdnBot(GtalkRobot):
 						#     print "key is not xbmc"
 						#     print key
 						for staticdev in staticdevs['xbmc']:
-							print "adding xbmc devs to hosts"
-							self.xbmchosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],staticdev["port"],staticdev["label"]])
-							self.replyMessage(user, "Loaded "+staticdev["label"])
-						self.xbmcactive=0
-						self.x=xbmc(self.xbmchosts[self.xbmcactive][0],username=self.xbmchosts[self.xbmcactive][1],password=self.xbmchosts[self.xbmcactive][2],port=self.xbmchosts[self.xbmcactive][3])
-						print "xbmc connected!!"
+							print "adding xbmc devs to hosts, xbmchosts below"
+							self.x.xbmchosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],staticdev["port"],staticdev["label"]])
+							#self.replyMessage(user, "Loaded "+staticdev["label"])
 					except Exception, e:
-					    for i in e:
-					        self.replyMessage(user, "xbmchosts: "+e)
-					    pass
-				self.replyMessage(user,"Switching to "+self.xbmchosts[self.xbmcactive][4])
+						for i in e:
+							self.replyMessage(user, "xbmchosts: "+e)
+						pass
+				if self.x.xbmchosts:
+					print "success initing xbmc."
+					#self.replyMessage(user,"Switching to "+self.x.xbmchosts[self.x.xbmcactive][4])
+					savehosts=self.x.xbmchosts
+					self.x=xbmc(self.x.xbmchosts[self.x.xbmcactive][0],username=self.x.xbmchosts[self.x.xbmcactive][1],password=self.x.xbmchosts[self.x.xbmcactive][2],port=self.x.xbmchosts[self.x.xbmcactive][3])
+					self.x.xbmchosts=savehosts
+					self.x.xbmcactive=0
+					print "xbmc connected!!"
+				else:
+					self.replyMessage(user,"Site doesn't have any xbmc hosts.")
+					return
 						
 			else:
-				print "xbmchosts"
-				print self.xbmchosts
-				self.xbmcactive=0
-				self.x=xbmc(self.xbmchosts[self.xbmcactive][0],username=self.xbmchosts[self.xbmcactive][1],password=self.xbmchosts[self.xbmcactive][2],port=self.xbmchosts[self.xbmcactive][3])
+				print "xbmchosts currently set, reconnecting"
+				print self.x.xbmchosts
+				savehosts=self.x.xbmchosts
+				saveactive=self.x.xbmcactive
+				self.x=xbmc(self.x.xbmchosts[self.x.xbmcactive][0],username=self.x.xbmchosts[self.x.xbmcactive][1],password=self.x.xbmchosts[self.x.xbmcactive][2],port=self.x.xbmchosts[self.x.xbmcactive][3])
+				self.x.xbmcactive=saveactive
+				self.x.xbmchosts=savehosts
 				print "xbmc connected!!"
 		except Exception, e:
 			for i in e:
 				msg="xbmc Exception: %s" % e
 				self.replyMessage(user, msg)
+				return
 		if action == "play"  or action == 'pause':
 			result=self.x.play_pause()
 			if result:
-				msg = "Toggling play/pause on "+self.xbmchosts[self.xbmcactive][0]
+				msg = "Toggling play/pause on "+self.x.xbmchosts[self.x.xbmcactive][4]
 				self.replyMessage(user, msg)
 			else:
 				self.replyMessage(user,"See what's playing first")
 		if action == "what":
 			try:
-				whatisplaying=self.x.what()
 				print "xbmc what: host is below, active index below that"
-				print self.xbmchosts
-				print self.xbmcactive
+				print self.x.xbmchosts
+				print self.x.xbmcactive
+				whatisplaying=self.x.what()
+				print "sdn.xbmc.what: whatisplaying below:"
+				print whatisplaying
 				if whatisplaying:
-					self.replyMessage(user,whatisplaying+" is playing on "+self.xbmchosts[self.xbmcactive][0])
+					self.replyMessage(user,whatisplaying+" is playing on "+self.x.xbmchosts[self.x.xbmcactive][4])
 				else:
-					self.replyMessage(user,"Nothing is playing on "+self.xbmchosts[self.xbmcactive][0])
+					self.replyMessage(user,"Nothing is playing on "+self.x.xbmchosts[self.x.xbmcactive][4])
 					
 			except Exception, e:
 				for i in e:
 					self.replyMessage(user,"sdnbot.what: Exception is "+i)
 				pass
 		if action == 'switch':
-			self.xbmcactive+=1
+			self.replyMessage(user,"Current xbmc is "+self.x.xbmchosts[self.x.xbmcactive][4])
+			self.x.xbmcactive+=1
 			try:
-			  print "len of xbmchosts is %d" % len(self.xbmchosts)
-			  if self.xbmcactive >= len(self.xbmchosts):
-				self.xbmcactive=0
-			  self.x=xbmc(self.xbmchosts[self.xbmcactive][0],username=self.xbmchosts[self.xbmcactive][1],password=self.xbmchosts[self.xbmcactive][2],port=self.xbmchosts[self.xbmcactive][3])
-			  self.replyMessage(user,"Switching to "+self.xbmchosts[self.xbmcactive][4])
+			  print "len of xbmchosts is %d" % len(self.x.xbmchosts)
+			  if self.x.xbmcactive >= len(self.x.xbmchosts):
+				self.x.xbmcactive=0
+			  savehosts=self.x.xbmchosts
+			  saveactive=self.x.xbmcactive
+			  self.x=xbmc(self.x.xbmchosts[self.x.xbmcactive][0],username=self.x.xbmchosts[self.x.xbmcactive][1],password=self.x.xbmchosts[self.x.xbmcactive][2],port=self.x.xbmchosts[self.x.xbmcactive][3])
+			  self.x.xbmchosts=savehosts
+			  self.x.xbmcactive=saveactive
+			  self.replyMessage(user,"Switching to "+self.x.xbmchosts[self.x.xbmcactive][4])
 			  try:
 					whatisplaying=self.x.what()
 					print "xbmc what: host is below, active index below that"
-					print self.xbmchosts
-					print self.xbmcactive
+					print self.x.xbmchosts
+					print self.x.xbmcactive
 					if whatisplaying:
-						self.replyMessage(user,whatisplaying+" is playing on "+self.xbmchosts[self.xbmcactive][0])
+						self.replyMessage(user,whatisplaying+" is playing on "+self.x.xbmchosts[self.x.xbmcactive][4])
 					else:
-						self.replyMessage(user,"Nothing is playing on "+self.xbmchosts[self.xbmcactive][0])
+						self.replyMessage(user,"Nothing is playing on "+self.x.xbmchosts[self.x.xbmcactive][4])
 					
 			  except Exception, e:
 					for i in e:
@@ -469,13 +561,81 @@ class SdnBot(GtalkRobot):
 			except:
 			  self.replyMessage(user,"could not switch :/")
 
+	def command_10_bootstrapChef(self, user, message, args):
+		'''([Cc]hef)\s+(bootstrap)( +(.*))?$(?i)'''
+		action=args[1]
+		target=None
+		try:
+			print "args"
+			print args
+			if args[2] != None:
+				target=args[2]
+				target=target.lstrip()
+			else:
+				target='all'
+		except:
+			pass
+		if action == "bootstrap":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to load a site first.")
+				else:
+					for host in self.devload.hosts:
+						self.replyMessage(user, "Performing chef bootstrap "+target+" on "+host[0])
+						print host
+						self.devload.device_type=host[3]
+						guardian_angel=actions(host[3], host[0], host[1], host[2],debug=self.debug)
+						data=guardian_angel.chef_bootstrap(target)
+						for line in data:
+							self.replyMessage(user,  host[0]+": "+line)
+							time.sleep(1)
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+	def command_11_knifeChef(self, user, message, args):
+		'''([Cc]hef)\s+(knife)( +(.*))?$(?i)'''
+		action=args[1]
+		target=None
+		try:
+			print "args"
+			print args
+			if args[2] != None:
+				target=args[2]
+				target=target.lstrip()
+			else:
+				target='all'
+		except:
+			pass
+		if action == "knife":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to load a site first.")
+				else:
+					for host in self.devload.hosts:
+						self.replyMessage(user, "Performing knife "+target+" on "+host[0])
+						print host
+						self.devload.device_type=host[3]
+						guardian_angel=actions(host[3], host[0], host[1], host[2])
+						data=guardian_angel.chef_knife(target)
+						if data:
+							for line in data:
+								self.replyMessage(user,  host[0]+": "+line)
+								time.sleep(1)
+					
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
 	#This method is used to response users.
-	def command_09_sayHello(self, user, message, args):
+	def command_110_sayHello(self, user, message, args):
 		'''([Hh]ello|[Hh]i|[Hh]ola)'''
 		msg = args[0]
 		self.replyMessage(user, msg)
 
-	def command_10_sayHelp(self, user, message, args):
+	def command_111_sayHelp(self, user, message, args):
 		'''(help|Help)'''
 		msg = """
 		Help:
@@ -485,10 +645,12 @@ class SdnBot(GtalkRobot):
 		  lists current working site and devices
 		sdn load site [dal2|iad]
 		  load the static devices for a site
+		snd load [device_type or label]
+		  loads a specific group of device types, ie ciscorouter, or a single device
 		sdn banip [attacker]
-		   ban the ip for the site
+		   ban the ip on the loaded devices
 		sdn backup
-		  backup all devices in the site
+		  backup all devices in the loaded device list
 
 		xbmc -- Xbox Media Center module
 		xbmc what -- what is playing
@@ -505,6 +667,15 @@ class SdnBot(GtalkRobot):
 		  close event by passing the event id
 		"""
 		self.replyMessage(user, msg)
+		time.sleep(2)
+		msg = """
+		chef -- Chef command module
+		chef bootstrap [target] runlist="cookbook1,cookbook2"
+			performs a knife bootstrap command on the chef-server type
+		chef knife [cmds]
+			wrapper for general knife commands
+		"""
+		self.replyMessage(user, msg)
 
 	def command_900_default(self, user, message, args):
 		'''.*?(?s)(?m)'''
@@ -517,6 +688,6 @@ class SdnBot(GtalkRobot):
 ############################################################################################################################
 if __name__ == "__main__":
 	bot = SdnBot(debug=bigbadbug)
-	bot.setState('available', "How may I help?")
-	bot.start("mygmailaccount@gmail.com", "xxxxxx")
+	bot.setState('available', "How YOU doin'?")
+	bot.start("bot.@gmail.com", "gmailpass")
 	#bot.replyMessage("private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com","Happy New Year!")
