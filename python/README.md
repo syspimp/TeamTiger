@@ -37,6 +37,50 @@ Script:
     Make a one function script, ie banip.py or backup.py
 
 
+SDN CLI Help
+=============
+
+The cli lets you interact directly with devices managed by the SDN module. It allows you to control more than one device at a time.
+
+To start you will have to load devices, then you can execute commands on them.
+
+add_host:
+
+        add one host to the loaded device list.  comma separated ip,username,password,device_type
+        sdn > add_host 192.168.1.1,root,myrootpassword,arista
+
+clear:
+        
+        clear the loaded device list.
+
+add_aristas:
+    
+        add all the arista devices to the loaded device list
+
+add_quantas:
+    
+        add all the quantas devices to the loaded device list
+
+list:
+
+        list all loaded devices.
+
+backup:
+
+        backup all loaded devices.
+
+ban_ip:
+        
+        ban ip on all loaded devices.
+
+run:
+
+        run a command on all loaded devices:
+        sdn - ciscorouter > run show version
+
+exit|quit:
+
+        quit the application.
 
 SDN Bot Help
 =============
