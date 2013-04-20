@@ -24,13 +24,14 @@
 # This is an sample PyGtalkRobot that serves to set the show type and status text of robot by receiving message commands.
 #
 
-import sys
+import os,sys
 import time
 from sdncli import sdncli
 from sdn import config
 from sdn import zenossapi
 from sdn import actions
 from sdn import xbmc
+from sdn import openstack
 from PyGtalkRobot import GtalkRobot
 # debug switch
 #bigbadbug=['nodebuilder', 'dispatcher', 'gen_auth', 'SASL_auth', 'bind', 'socket', 'CONNECTproxy', 'TLS', 'roster', 'browser', 'ibb']
@@ -87,7 +88,7 @@ class SdnBot(GtalkRobot):
 		self.replyMessage(user, "\nEmail sent to "+ email_addr +" at: "+time.strftime("%Y-%m-%d %a %H:%M:%S", time.gmtime()))
 	def command_003_zenossEvents(self,user,message,args):
 		'''([Zz]enoss|[Zz]en)\s+(events|close)( +(.*))?$(?i)'''
-		max=5
+		max=10
 		#if args[2]:
 		#    max = args[2]
 		print "in zenossEvents: args1 is xx%sxx" % args[1]
@@ -117,10 +118,17 @@ class SdnBot(GtalkRobot):
 						if now >= max:
 							break
 						print "doing evt %s" % key
-						msg= "Event id: " +key['evid']+ "\n" + key['eventState'] + ": " + key['summary'] + "\nComponent: " + key['component']['text']
-						msg+="\n================"
+						component="None"
+						componenturl="None"
+						msg="\n"
+						if key['component']['text']:
+							component=key['component']['text']
+						if key['component']['url']:
+							componenturl=config.zenosshost+key['component']['url']
+						msg= "Event id:\n\t" +key['evid']+ "\nEvent URL:\n\t"+config.zenosshost+"/zport/dmd/Events/viewDetail?evid=" +key['evid']+ "\n" + key['eventState'] + ":\n\t " + key['summary'] + "\nComponent:\n\t" + component +"\nURL:\n\t" + componenturl +"\n"
+						msg+="================"
 						self.replyMessage(user, msg)
-						time.sleep(2)
+						#time.sleep(2)
 						now=now+1
 						#print "this is evt"
 						#print 
@@ -142,7 +150,7 @@ class SdnBot(GtalkRobot):
 					 self.replyMessage(user, "You need to give me an evid to ack.")
 	def command_004_zenossDevicess(self,user,message,args):
 		'''([Zz]enoss|[Zz]en)\s+(get|add)( +(.*))?$(?i)'''
-		max=5
+		max=10
 		#if args[2]:
 		#    max = args[2]
 		print "in zenossDevices: args1 is xx%sxx" % args[1]
@@ -209,12 +217,15 @@ class SdnBot(GtalkRobot):
 					for group in device['groups']:
 						if group:
 							groups  = groups + "\n" + group['name']
-					msg=name + '/' + ip + "\n"+ "Alert count:" + str(alerts) + "\nGroup membership:" + groups+"\n"
-					msg+="Uid:"+device['uid']+"\n"
+					msg="Name:\n\t"+name + '\nIP:\n\t' + ip + "\nAlert count:\n\t"+str(alerts) + "\nGroup membership:\n\t" + groups+"\n"
+					msg+="Zenoss URL: \""+config.zenosshost+device['uid'].replace(' ','%20')+"\"\n"
+					msg+="SSH: \"ssh://"+ip+"\"\n"
+					msg+="RDP: \"rdp://"+ip+"\"\n"
+					msg+="HTTP: \"http://"+ip+"\"\n"
 					msg+= "==========\n"
 					print msg
 					self.replyMessage(user, msg)
-					time.sleep(2)
+					#time.sleep(2)
 					i=i+1
 			except Exception, e:
 				for i in e:
@@ -254,7 +265,7 @@ class SdnBot(GtalkRobot):
 					if self.devtype:
 						self.replyMessage(user, "only " +self.devtype+ " type.")
 					for host in self.devload.hosts:
-						self.replyMessage(user, host[5] + " ready.")
+						self.replyMessage(user, host[5] + "."+host[3]+ " ip addr "+host[0]+" ready.")
 			except:
 				self.replyMessage(user, "You need to load a site first.")
 
@@ -313,7 +324,7 @@ class SdnBot(GtalkRobot):
 						print host
 						self.devload.device_type=host[3]
 						guardian_angel=actions(host[3], host[0], host[1], host[2],debug=self.debug)
-						self.replyMessage(user, "Backing up "+  host[0])
+						self.replyMessage(user, "Bootstrapping "+  host[0])
 						guardian_angel.chef_bootstrap(target)
 			except Exception, e:
 				for i in e:
@@ -361,9 +372,11 @@ class SdnBot(GtalkRobot):
 									#print "staticdevs"
 									#print staticdevs
 									try:
+										loadedlist=""
 										for staticdev in staticdevs[device_type]:
 											self.devload.hosts.append([staticdev["hostname"],staticdev["username"],staticdev["password"],device_type,staticdev["port"],staticdev["label"]])
-											self.replyMessage(user, "Loaded "+staticdev["label"]+"."+device_type)
+											loadedlist += "Loaded %s.%s\n" % (staticdev["label"],device_type)
+										self.replyMessage(user, loadedlist)
 									except:
 										pass
 							except:
@@ -398,7 +411,7 @@ class SdnBot(GtalkRobot):
 										self.devload.hosts.append([staticdev[target[0]][0]["hostname"],staticdev[target[0]][0]["username"],staticdev[target[0]][0]["password"],target[0],staticdev[target[0]][0]["port"],staticdev[target[0]][0]["label"]])
 										self.devtype=target[0]
 										self.replyMessage(user, "Loaded "+staticdev[target[0]][0]["label"]+"."+target[0])
-										time.sleep(1)
+										#time.sleep(1)
 									else:
 										print "skipping!"
 								except:
@@ -425,7 +438,7 @@ class SdnBot(GtalkRobot):
 									self.devload.hosts.append([entry["hostname"],entry["username"],entry["password"],target[0],entry["port"],entry["label"]])
 									self.devtype=target[0]
 									self.replyMessage(user, "Loaded "+entry["label"]+"."+target[0])
-									time.sleep(1)
+									#time.sleep(1)
 									break
 				except Exception, e:
 					for i in e:
@@ -588,7 +601,7 @@ class SdnBot(GtalkRobot):
 						data=guardian_angel.chef_bootstrap(target)
 						for line in data:
 							self.replyMessage(user,  host[0]+": "+line)
-							time.sleep(1)
+							#time.sleep(1)
 			except Exception, e:
 				for i in e:
 					msg="Exception: %s" % e
@@ -614,16 +627,240 @@ class SdnBot(GtalkRobot):
 					self.replyMessage(user, "You need to load a site first.")
 				else:
 					for host in self.devload.hosts:
+						print "knifechef: is this a chefserver?:"
+						host
+						if host[3] != 'chefserver':
+							continue
 						self.replyMessage(user, "Performing knife "+target+" on "+host[0])
-						print host
 						self.devload.device_type=host[3]
-						guardian_angel=actions(host[3], host[0], host[1], host[2])
+						try:
+							if config.sshkeys[host[3]]:
+								sshkey=config.sshkeys[host[3]]
+							else:
+								sshkey=config.sshkey
+						except:
+							sshkey=config.sshkey
+						guardian_angel=actions(host[3], host[0], host[1], host[2],sshkey=sshkey)
 						data=guardian_angel.chef_knife(target)
 						if data:
+							reply=""
 							for line in data:
-								self.replyMessage(user,  host[0]+": "+line)
-								time.sleep(1)
+								reply += "%s\n" % line
+
+							self.replyMessage(user, reply)
 					
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+	def command_12_openstackList(self, user, message, args):
+		'''([Oo]s)\s+(list|show|boot|kill|addfloat)( +(.*))?$(?i)'''
+		action=args[1]
+		target=None
+		try:
+			print "args"
+			print args
+			if args[2] != None:
+				target=args[2]
+				target=target.lstrip()
+			else:
+				target='all'
+		except:
+			pass
+		if action == "list":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to load a site first.")
+				else:
+					self.replyMessage(user, "Checking for a openstack type in loaded hosts...")
+					for host in self.devload.hosts:
+						print "oslist: is this an openstack server?:"
+						if host[3] != 'openstack':
+							continue
+						if not target:
+							self.replyMessage(user, "List what? servers, flavors, or images")
+						self.replyMessage(user, "Performing cmd "+target+" on "+host[0])
+						if target == "servers":
+							data=openstack().list_servers()
+							dd2r = range(len(data['servers']))
+							reply=""
+							for n in dd2r:
+								reply += "Server ID\n"
+								reply += "\t"+str(data['servers'][n]['id']) + "\n"
+								reply += "Server Name\n"
+								reply += "\t"+data['servers'][n]['name'] + "\n"
+								ips=openstack().show_server_ips(str(data['servers'][n]['id']))
+								for net in ips['addresses']:
+									print "net is %s" % net
+									print ips['addresses'][net]
+									for i in  ips['addresses'][net]:
+										reply += "\t"+net+": "+i['addr']+"\n"
+								#print ips
+								reply += "===============\n"
+
+							self.replyMessage(user, reply)
+						elif target == "images":
+							self.replyMessage(user, "I dont know what xx"+target+"xx is.")
+							data=openstack().list_images()
+							dd3r = range(len(data['images']))
+							reply=""
+							for n in dd3r:
+								reply += "Image ID\n"
+								reply += "\t"+str(data['images'][n]['id']) + "\n"
+								reply += "Image Name\n"
+								reply += "\t"+data['images'][n]['name'] + "\n"
+								reply += "===============\n"
+
+							self.replyMessage(user, reply)
+						elif target == "flavors":
+							data=openstack().list_flavors()
+							dd3r = range(len(data['flavors']))
+							reply=""
+							for n in dd3r:
+								reply += "Flavors ID\n"
+								reply += "\t"+str(data['flavors'][n]['id']) + "\n"
+								reply += "Flavor Name\n"
+								reply += "\t"+data['flavors'][n]['name'] + "\n"
+								reply += "===============\n"
+
+							self.replyMessage(user, reply)
+						#print "and the survey says..."
+						#print data
+						#if data:
+						#	reply=""
+						#	for line in data:
+						#		reply += "%s\n" % line
+						#
+						#	self.replyMessage(user, reply)
+			
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+		elif action == "boot":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to give a server name.")
+				else:
+					for host in self.devload.hosts:
+						print "oslist: is this an openstack server?:"
+						host
+						if host[3] != 'openstack':
+							continue
+						self.replyMessage(user, "Starting m1.tiny "+target+" on "+host[0])
+						
+						data=openstack().server_boot(target)
+						print "results of server start:"
+						print data
+						dd2r = range(len(data['server']))
+						reply = "\n===============\n"
+						reply += "Server ID\n"
+						reply += "\t"+str(data['server']['id']) + "\n"
+						reply += "Server Security Groups\n"
+						for sec in data['server']['security_groups']:
+							print data['server']['security_groups']
+							print sec
+							reply +=  "\t"+sec['name']+"\n"
+						reply += "Admin Pass\n"
+						reply += "\t"+str(data['server']['adminPass']) + "\n"
+							
+						#print ips
+						reply += "===============\n"
+						self.replyMessage(user, reply)
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+		elif action == "kill":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to give a server uuid.")
+				else:
+					self.replyMessage(user, "Checking for a openstack type in loaded hosts...")
+					for host in self.devload.hosts:
+						print "oslist: is this an openstack server?:"
+						host
+						if host[3] != 'openstack':
+							continue
+						self.replyMessage(user, "Terminating uuid "+target+" on "+host[0])
+						
+						data=openstack().server_terminate(target)
+						reply = "\n================\n"
+						reply += "*Server KILLED*"
+						reply += "\n================\n"
+						self.replyMessage(user, reply)
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+		elif action == "addfloat":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to give a server uuid.")
+				else:
+					self.replyMessage(user, "Checking for a openstack type in loaded hosts...")
+					for host in self.devload.hosts:
+						print "oslist: is this an openstack server?:"
+						host
+						if host[3] != 'openstack':
+							continue
+						self.replyMessage(user, "Adding Floating IP to "+target+" on "+host[0])
+						
+						data=openstack().server_floatip('ADD',target)
+						reply += "\n================================\n"
+						reply += "*Added Floating IP "+data+"*"
+						reply += "\n=================================\n"
+						self.replyMessage(user, reply)
+			except Exception, e:
+				for i in e:
+					msg="Exception: %s" % e
+					self.replyMessage(user, msg)
+				pass
+		elif action == "show":
+			try:
+				if not target:
+					self.replyMessage(user, "You need to give a server uuid.")
+				else:
+					self.replyMessage(user, "Checking for a openstack type in loaded hosts...")
+					for host in self.devload.hosts:
+						print "oslist: is this an openstack server?:"
+						host
+						if host[3] != 'openstack':
+							continue
+						data=openstack().show_server(target)
+						print "results of show server:"
+						print data
+						dd2r = range(len(data['server']))
+						reply = "\n===============\n"
+						reply += "Server Name\n"
+						reply += "\t"+str(data['server']['name']) + "\n"
+						reply += "Created\n"
+						reply += "\t"+str(data['server']['created']) + "\n"
+						reply += "Networks\n"
+						for net in data['server']['addresses']:
+							print "net is %s" % net
+							print data['server']['addresses'][net]
+							for i in  data['server']['addresses'][net]:
+								reply += "\t"+net+": "+i['addr']+"\n"
+						reply += "Server Security Groups\n"
+						for sec in data['server']['security_groups']:
+							print data['server']['security_groups']
+							print sec
+							reply +=  "\t"+sec['name']+"\n"
+						reply += "Key Name:\n"
+						reply += "\t"+str(data['server']['key_name']) + "\n"
+						reply += "VM State:\n"
+						reply += "\t"+str(data['server']['OS-EXT-STS:vm_state']) + "\n"
+						reply += "Flavor:\n"
+						flavors=openstack().show_flavor(data['server']['flavor']['id'])
+						for flavor in flavors:
+							reply += "\t"+str(flavors[flavor]['name']) + "\n"
+						reply += "===============\n"
+						self.replyMessage(user, reply)
 			except Exception, e:
 				for i in e:
 					msg="Exception: %s" % e
@@ -676,7 +913,17 @@ class SdnBot(GtalkRobot):
 			wrapper for general knife commands
 		"""
 		self.replyMessage(user, msg)
-
+	def command_500_jokes(self, user, message, args):
+		'''([Jj]oke)'''
+		import pycurl
+		import cStringIO
+		buf = cStringIO.StringIO()
+		c = pycurl.Curl()
+		c.setopt(c.URL, 'http://ec2-184-73-234-109.compute-1.amazonaws.com/jokebot/?format=text')
+		c.setopt(c.WRITEFUNCTION, buf.write)
+		c.perform()
+		self.replyMessage(user, buf.getvalue())
+		buf.close()
 	def command_900_default(self, user, message, args):
 		'''.*?(?s)(?m)'''
 		#ignore
@@ -689,5 +936,4 @@ class SdnBot(GtalkRobot):
 if __name__ == "__main__":
 	bot = SdnBot(debug=bigbadbug)
 	bot.setState('available', "How YOU doin'?")
-	bot.start("bot.@gmail.com", "gmailpass")
-	#bot.replyMessage("private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com","Happy New Year!")
+	bot.start("robojones@openfire.xmppserver", "notarealpass")

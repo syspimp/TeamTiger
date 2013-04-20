@@ -1,21 +1,27 @@
-debug=False
-room='private-chat67db6@groupchat.google.com/bot'
-authorized_admins=['user1@gmail.com','user2@gmail.com']
+debug=True
+# openstack
+oshost = "10.55.2.155"
+osuser = "admin"
+ospass = "notarealpass"
+tenantid = "938b8b2c602d4640891a61289463b168"
+
+room='private-chat-afa0bf1e-935b-4d85-ac35-5d3471567db6@groupchat.google.com/assistantibot'
+authorized_admins=['youremailhere@gmail.com','myemailhere@gmail.com']
 rootusername='root'
-rootpassword='xxxxx'
-username='test'
-password='xxxx'
+rootpassword='notarealpass'
+username='admintest'
+password='admintest'
 xbmcusername='xbmc'
 xbmcpassword='xbmc'
 xbmcport='8081'
 xbmchostname='10.55.2.161'
 zenossuser='admin'
-zenosspass='xxxx'
+zenosspass='notarealpass'
 sshkey=None
 # device types allowed
 # these will have methods defined
-device_types = ['hpswitch','linux','ciscoswitch','arista','ciscoasa','ciscorouter','quanta','xbmc','chefclient','chefserver']
-zenosshost = 'http://admin3.tfound.org:8080'
+device_types = ['hpswitch','linux','ciscoswitch','arista','ciscoasa','ciscorouter','quanta','xbmc','chefclient','chefserver','openstack']
+zenosshost = 'http://admin3.zenoss.server:8080'
 
 # mapping of devices to access type, 
 # uses device_type as a key
@@ -28,6 +34,9 @@ access_types = 	{
 			'quanta':	'telnet',
 			'linux':	'ssh',
 			'xbmc':		'json',
+			'chefserver':	'ssh',
+			'chefclient':	'ssh',
+			'openstack':	'json',
 			}
 terminalprompts = {
 			'ciscoswitch':	'#',
@@ -37,6 +46,8 @@ terminalprompts = {
 			'hpswitch':	'#',
 			'quanta':	'(Quanta) >',
 			'linux':	'#',
+			'chefserver':	'#',
+			'chefclient':	'#',
 }
 logouts = {
 			'ciscoswitch':	'exit',
@@ -46,12 +57,24 @@ logouts = {
 			'hpswitch':	'exit',
 			'quanta':	'quit',
 			'linux':	'exit',
+			'chefserver':	'exit',
+			'chefclient':	'exit',
 }
+sshkeys = {
+			'chefserver':	"/home/ubuntu/.ssh/admin-openstack.priv",
+			'chefclient':	"/home/ubuntu/.ssh/admin-openstack.priv",
+			'linux':	"/home/ubuntu/.ssh/id_rsa",
+}
+# these sites should map to data bags in chef
 sites = ['tfound','dal2','iad2']
+
+# static site configuration
 # this uses the device_type as a key
 # under each type, info is in a list
+#
+# a sites databag will contain the same structure
 tfound_devices = [{	
-				'linux':	
+				'openstack':	
 					[{
 					'hostname':	'10.55.2.155',
 					'username':	rootusername,
@@ -66,6 +89,15 @@ tfound_devices = [{
 					'username':	rootusername,
 					'password':	rootpassword,
 					'label':	'master',
+					'port':		'22'
+					}],
+			},
+			{	'linux':	
+					[{
+					'hostname':	'10.55.20.3',
+					'username':	rootusername,
+					'password':	rootpassword,
+					'label':	'admin3',
 					'port':		'22'
 					}],
 			},
@@ -105,6 +137,15 @@ tfound_devices = [{
 					'label':	'frontroom-droid'
 					}]
 			},
+			{	'xbmc':
+					[{
+					'hostname':	'10.55.2.162',
+					'username':	xbmcusername,
+					'password':	xbmcpassword,
+					'port':		'8080',
+					'label':	'basementxbmc'
+					}]
+			},
 			{	'ciscorouter':
 					[{
 					'hostname':	'10.55.2.1',
@@ -121,6 +162,15 @@ tfound_devices = [{
 					'password':	rootpassword,
 					'port':		'23',
 					'label':	'core switch'
+					}]
+			},
+			{	'windows':
+					[{
+					'hostname':	'10.55.2.162',
+					'username':	rootusername,
+					'password':	rootpassword,
+					'port':		'8081',
+					'label':	'basement'
 					}]
 			},
 			]

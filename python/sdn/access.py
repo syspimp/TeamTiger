@@ -1,5 +1,8 @@
 import sys,os
 import logging
+import httplib
+import json
+
 sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
@@ -7,7 +10,7 @@ from sdn import config
 logging.getLogger('backup').addHandler(logging.NullHandler())
 
 class access():
-	def __init__(self,device_type,hostname,username=config.username,password=config.password,sshkey=config.sshkey,debug=False):
+	def __init__(self,device_type,hostname,username=config.username,password=config.password,sshkey=config.sshkey,debug=config.debug):
 		self.hostname=hostname
 		self.username=username
 		self.password=password
@@ -34,7 +37,7 @@ class access():
 					username=self.username, 
 					password=self.password,
 					timeout=5,
-					key_filename=sshkey)
+					key_filename=self.sshkey)
 			else:
 				client.connect(self.hostname, 
 					username=self.username, 
@@ -51,6 +54,16 @@ class access():
 			self.debugit(msg)
 			stdin, stdout, stderr = client.exec_command(cmd["write"])
 			try:
+				self.debugit("checking for errors")
+				stdin.flush()
+				stderr.flush()
+				error=stderr.read().splitlines
+				for line in error:
+					if cmd["read"] in line:
+						msg="matched "+line+",breaking"
+						self.debugit(msg)
+						break
+
 				if cmd["read"]:
 					msg="Reading: " +cmd["read"]
 					self.debugit(msg)
@@ -62,14 +75,17 @@ class access():
 							break
 			except:
 				pass
-			stdin.flush()
+			self.debugit("returning data.")
 			data = stdout.read().splitlines()
+			dataerr = stdout.read().splitlines()
 			if self.debug is not False:
 				for line in data:
 					self.debugit(line)
+				for line in dataerr:
+					self.debugit("Stdout: "+line)
 		try:
-			stdin.close()
-			client.close()
+			#stdin.close()
+			#client.close()
 			return data
 		except:
 			pass
@@ -100,3 +116,24 @@ class access():
 		except Exception as e:
 			for i in e:
 				print "Exception is: %s" % i
+	def _json_access(self,cmds):
+		try:
+			conn = httplib.HTTPConnection(cmds['host'])
+			conn.request(cmds['method'], cmds['url'], cmds['params'], cmds['headers'])
+			response = conn.getresponse()
+			data = response.read()
+			if data:
+				print "dumping raw json data"
+				print data
+				dd = json.loads(data)
+				print "dumping json data"
+				print dd
+				conn.close()
+				return dd
+			else:
+				print "no data returned"
+		except Exception, e:
+			print "access: cant do json"
+			for i in e:
+				print i
+

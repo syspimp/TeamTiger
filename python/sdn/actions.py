@@ -1,17 +1,27 @@
 from sdn import config,devices,access
 
 class actions():
-	def __init__(self,device_type='',hostname='',username=config.username,password=config.password,debug=False):
+	def __init__(self,device_type='',hostname='',username=config.username,password=config.password,debug=config.debug,sshkey=config.sshkey):
 		try:
 			self.device=devices(device_type,hostname,username,password)
-		except:
+		except Exception, e:
 			print "LOL give it up, you can't win!"
+			for i in e:
+				print i
 		self.debug=debug
 		self.device_type=device_type
 		self.hostname=hostname
 		self.username=username
 		self.password=password
-
+		try:
+			if sshkey != None:
+				self.sshkey=sshkey
+			elif config.sshkeys[self.device_type]:
+				self.sshkey=config.sshkeys[self.device_type]
+			else:
+				self.sshkey=sshkey
+		except:
+			self.sshkey=sshkey
 
 	def debugit(self,msg):
 		if self.debug is not False:
@@ -108,7 +118,7 @@ class actions():
 			pass
 		try:
 			if cmd:
-				return access(self.device_type,self.hostname,"ubuntu",self.password,sshkey="/home/ubuntu/.ssh/dtaylor-openstack.priv")._ssh_access(cmd)
+				return access(self.device_type,self.hostname,self.username,self.password,sshkey=self.sshkey)._ssh_access(cmd)
 		except:
 			print "Exception in chef knife."
 			pass

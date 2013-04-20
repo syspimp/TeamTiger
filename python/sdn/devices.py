@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+'/../')
 from sdn import config
 
 class devices():
-	def __init__(self,device_type,hostname,username='',password='',terminalprompt='',logout='',backupdest='',tftpserver='',destination='backups',debug=True,sshkey=''):
+	def __init__(self,device_type,hostname,username='',password='',terminalprompt='',logout='',backupdest='',tftpserver='10.55.20.3',destination='backups',debug=config.debug,sshkey=config.sshkey):
 		# sanity check
 		self.device_type=device_type
 		self.check_device_type()
@@ -27,10 +27,7 @@ class devices():
 		self.logout=logout
 		self.destination = destination
 		self.backupdest = "tftp://"+ self.tftpserver + "/" + self.destination + "/" + self.hostname + ".cfg"
-		if sshkey == '':
-			self.sshkey = config.sshkey
-		else:
-			self.sshkey = sshkey
+		self.sshkey = sshkey
 		
 		return
 
@@ -127,7 +124,7 @@ class devices():
 
 	def linux_backup(self):
 		self.debugit("Making chat scirpt for linux backup")
-		cmd=	[	{	"write":	"echo 'Im backing up the box from sdnbot!'| logger -t kernel",
+		cmd=	[	{	"write":	"echo 'Im backing up the box from sdnbot!'| logger -t backup",
 #					"read":		"--More--"
 				}
 				]
